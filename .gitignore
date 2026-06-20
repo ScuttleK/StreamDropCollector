@@ -1,0 +1,25 @@
+# Sensitive files
+*backup-codes*
+*.bak
+
+# Default Visual Studio stuff
+[Bb]in/
+[Oo]bj/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.pdb
+*.cache
+*.log
+*.vs/
+*.vscode/
+*.resharper
+*.ncrunch*
+*.suo
+*.userprefs
+
+# BUT: ALWAYS track this exact self-contained publish folder (and every new file inside it forever)
+!UI/bin/Release/net10.0-windows10.0.17763.0/publish/win-x64/
+!UI/bin/Release/net10.0-windows10.0.17763.0/publish/win-x64/**
+/UI/bin/Release/net10.0-windows10.0.17763.0/publish/win-x64/test.txt

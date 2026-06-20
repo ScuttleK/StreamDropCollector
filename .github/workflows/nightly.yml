@@ -1,0 +1,59 @@
+name: Nightly Build
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish (Self-Contained)
+        run: >
+          dotnet publish UI/UI.csproj
+          -c Release
+          -r win-x64
+          -p:SelfContained=true
+          -o publish/self-contained/
+
+      - name: Publish (Framework-Dependent)
+        run: >
+          dotnet publish UI/UI.csproj
+          -c Release
+          -r win-x64
+          -p:SelfContained=false
+          -o publish/framework-dependent/
+
+      - name: Zip (Self-Contained)
+        run: Compress-Archive -Path publish/self-contained/* -DestinationPath StreamDropCollector-nightly-self-contained.zip
+
+      - name: Zip (Framework-Dependent)
+        run: Compress-Archive -Path publish/framework-dependent/* -DestinationPath StreamDropCollector-nightly-framework-dependent.zip
+
+      - name: Delete existing nightly release
+        run: gh release delete nightly --yes --cleanup-tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Create nightly release
+        run: >
+          gh release create nightly
+          StreamDropCollector-nightly-self-contained.zip
+          StreamDropCollector-nightly-framework-dependent.zip
+          --title "Nightly Build"
+          --notes "Automated build from latest commit on master."
+          --prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
