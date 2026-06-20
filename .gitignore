@@ -1,6 +1,7 @@
 # Sensitive files
 *backup-codes*
 *.bak
+CLAUDE.md
 
 # Default Visual Studio stuff
 [Bb]in/
