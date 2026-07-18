@@ -23,10 +23,10 @@ namespace UI
     /// </summary>
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
-        public ICommand? JoinDiscordCommand { get; }
         public ICommand? ToggleWindowCommand { get; }
         public ICommand? CloseCommand { get; }
         public ICommand? OpenGithubCommand { get; }
+        public ICommand? OpenReleasesCommand { get; }
 
         private bool _isTrayIconVisible;
         public bool IsTrayIconVisible
@@ -36,6 +36,7 @@ namespace UI
             {
                 _isTrayIconVisible = value;
                 UpdateTrayIconVisibility();
+                OnPropertyChanged();
             }
         }
 
@@ -98,7 +99,7 @@ namespace UI
             ToggleWindowCommand = new RelayCommand(o => ToggleWindowState());
             CloseCommand = new RelayCommand(o => CloseApplication());
             OpenGithubCommand = new RelayCommand(o => Core.Utility.LaunchWeb("https://github.com/Scuttle-ZapAccess/StreamDropCollector"));
-            JoinDiscordCommand = new RelayCommand(o => Core.Utility.LaunchWeb("https://discord.gg/Cddu5aJ"));
+            OpenReleasesCommand = new RelayCommand(o => Core.Utility.LaunchWeb("https://github.com/Scuttle-ZapAccess/StreamDropCollector/releases"));
 
             // Event handler for double-click on TaskbarIcon
             MyNotifyIcon.TrayMouseDoubleClick += OnTrayIconDoubleClick;
@@ -385,7 +386,7 @@ namespace UI
             Topmost = false;
 
             MinimizeAndRestore.Header = "Minimize";
-            MyNotifyIcon.ToolTipText = "Stream Drop Collector by tsgsOFFICIAL";
+            MyNotifyIcon.ToolTipText = "Stream Drop Collector";
         }
         /// <summary>
         /// Brings the window to the foreground, restoring it if minimized and ensuring it is visible and active.
@@ -525,7 +526,13 @@ namespace UI
         private void OnCloseButtonClicked(object sender, RoutedEventArgs e)
         {
             if (!UISettingsManager.Instance.RunInBackground)
+            {
+                // CloseApplication() calls Environment.Exit(0), which never returns - this only "worked"
+                // by relying on that. Made explicit so a future change to CloseApplication() (e.g. a
+                // cancelable Closing handler) can't fall through into also entering tray mode.
                 CloseApplication();
+                return;
+            }
 
             EnterTrayMode();
         }

@@ -166,7 +166,7 @@ namespace UI
         private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             AppLogger.Error("App", "Unhandled UI thread exception.", e.Exception);
-            System.Windows.MessageBox.Show($"An undefined error has happened, please contact tsgsOFFICIAL to resolve this issue.\n\nInclude the following Error Message: {e.Exception.Message}", "Undefined Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            System.Windows.MessageBox.Show($"An undefined error has happened, please report this issue on GitHub.\n\nInclude the following Error Message: {e.Exception.Message}", "Undefined Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
             e.Handled = true; // Prevents the application from crashing
         }
@@ -176,7 +176,7 @@ namespace UI
             if (e.ExceptionObject is Exception ex)
             {
                 AppLogger.Error("App", "Unhandled non-UI exception.", ex);
-                System.Windows.MessageBox.Show($"A critical error has happened, please contact tsgsOFFICIAL to resolve this issue.\n\nInclude the following Error Message: {ex.Message}", "Critical Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"A critical error has happened, please report this issue on GitHub.\n\nInclude the following Error Message: {ex.Message}", "Critical Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }

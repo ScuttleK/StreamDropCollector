@@ -41,12 +41,16 @@ namespace Core.Managers
         private bool _updateAvailable = false;
         private bool _notifyOnNewUpdateAvailable = true;
         private DateTime? _lastUpdateCheck = null;
-        private MiningPriorityMode _miningPriorityMode = MiningPriorityMode.AvailabilityThenProgress;
+        private MiningPriorityMode _miningPriorityMode = MiningPriorityMode.EndingSoonest;
         private List<string> _twitchGameWhitelistSlugs = new List<string>();
         private List<string> _kickGameWhitelistSlugs = new List<string>();
         private bool _twitchGameFilterBlacklistMode;
         private bool _kickGameFilterBlacklistMode;
         private bool _priorityQueueEnabled;
+        // Every game slug/name ever seen per platform, persisted so the filter list doesn't shrink to only
+        // whatever's currently active across app relaunches.
+        private Dictionary<string, string> _twitchGameHistory = new(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<string, string> _kickGameHistory = new(StringComparer.OrdinalIgnoreCase);
         private bool _isUpdatingGameFilterOptions;
         private bool _isLoadingSettings;
 
@@ -450,36 +454,54 @@ namespace Core.Managers
                     }
                 }
 
-                FileVersionInfo localVersionInfo = FileVersionInfo.GetVersionInfo(Utility.GetExePath());
-                UpdateInfo? serverUpdateInfo;
-
-                try
-                {
-                    using HttpClient client = new HttpClient();
-                    client.DefaultRequestHeaders.CacheControl = new CacheControlHeaderValue
-                    {
-                        NoCache = true
-                    };
-
-                    client.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
-
-                    serverUpdateInfo = JsonSerializer.Deserialize<UpdateInfo>(await client.GetStringAsync("https://raw.githubusercontent.com/Scuttle-ZapAccess/StreamDropCollector/master/updateInfo.sdc")) ?? new UpdateInfo();
-                }
-                catch (Exception ex)
-                {
-                    AppLogger.Warn("UISettings", $"Update check request failed: {ex.Message}");
-                    UpdateAvailable = false;
-                    return;
-                }
-
-                if (Version.TryParse(serverUpdateInfo.Version, out Version? serverVersion) && Version.TryParse(localVersionInfo.FileVersion, out Version? localVersion))
-                    UpdateAvailable = serverVersion > localVersion;
-                else
-                    UpdateAvailable = false;
-
-                _lastUpdateCheck = DateTime.Now;
-                SaveSettings();
+                await PerformUpdateCheckAsync();
             }
+        }
+        /// <summary>
+        /// Immediately checks GitHub for a newer version, bypassing the configured update-check frequency and its
+        /// "already checked recently" cooldown. Intended for a user-initiated "Check for Updates" action.
+        /// </summary>
+        /// <returns>true if a newer version is available; otherwise, false.</returns>
+        public async Task<bool> CheckForUpdatesNowAsync()
+        {
+            await PerformUpdateCheckAsync();
+            return UpdateAvailable;
+        }
+        /// <summary>
+        /// Fetches the published update manifest and compares it against the running version, updating
+        /// <see cref="UpdateAvailable"/> and the last-checked timestamp.
+        /// </summary>
+        private async Task PerformUpdateCheckAsync()
+        {
+            FileVersionInfo localVersionInfo = FileVersionInfo.GetVersionInfo(Utility.GetExePath());
+            UpdateInfo? serverUpdateInfo;
+
+            try
+            {
+                using HttpClient client = new HttpClient();
+                client.DefaultRequestHeaders.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true
+                };
+
+                client.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
+
+                serverUpdateInfo = JsonSerializer.Deserialize<UpdateInfo>(await client.GetStringAsync("https://raw.githubusercontent.com/Scuttle-ZapAccess/StreamDropCollector/master/updateInfo.sdc")) ?? new UpdateInfo();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("UISettings", $"Update check request failed: {ex.Message}");
+                UpdateAvailable = false;
+                return;
+            }
+
+            if (Version.TryParse(serverUpdateInfo.Version, out Version? serverVersion) && Version.TryParse(localVersionInfo.FileVersion, out Version? localVersion))
+                UpdateAvailable = serverVersion > localVersion;
+            else
+                UpdateAvailable = false;
+
+            _lastUpdateCheck = DateTime.Now;
+            SaveSettings();
         }
         /// <summary>
         /// Loads application settings from the configuration file, if it exists, and applies them to the current
@@ -522,6 +544,14 @@ namespace Core.Managers
                     PriorityQueueGames.Clear();
                     foreach (string game in settings.PriorityQueueGames ?? [])
                         PriorityQueueGames.Add(game);
+
+                    _twitchGameHistory = settings.TwitchGameHistory != null
+                        ? new Dictionary<string, string>(settings.TwitchGameHistory, StringComparer.OrdinalIgnoreCase)
+                        : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                    _kickGameHistory = settings.KickGameHistory != null
+                        ? new Dictionary<string, string>(settings.KickGameHistory, StringComparer.OrdinalIgnoreCase)
+                        : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 }
             }
             catch (Exception ex) when (ex is JsonException || ex is IOException || ex is UnauthorizedAccessException)
@@ -570,7 +600,9 @@ namespace Core.Managers
                     TwitchGameFilterBlacklistMode = _twitchGameFilterBlacklistMode,
                     KickGameFilterBlacklistMode = _kickGameFilterBlacklistMode,
                     PriorityQueueEnabled = PriorityQueueEnabled,
-                    PriorityQueueGames = [.. PriorityQueueGames]
+                    PriorityQueueGames = [.. PriorityQueueGames],
+                    TwitchGameHistory = new Dictionary<string, string>(_twitchGameHistory),
+                    KickGameHistory = new Dictionary<string, string>(_kickGameHistory)
                 };
 
                 string json = JsonSerializer.Serialize(settings, _jsonOptions);
@@ -668,33 +700,48 @@ namespace Core.Managers
         public void UpdateAvailableGameFilterOptions(IEnumerable<DropsCampaign> campaigns)
         {
             _isUpdatingGameFilterOptions = true;
+            bool historyChanged = false;
             try
             {
-                List<(Platform platform, string slug, string displayName)> options = campaigns
+                List<(Platform platform, string slug, string displayName)> seen = campaigns
                     .Where(c => !string.IsNullOrWhiteSpace(c.Slug))
                     .Select(c => (c.Platform, c.Slug.Trim().ToLowerInvariant(), c.GameName))
                     .GroupBy(x => $"{x.Platform}:{x.Item2}", StringComparer.OrdinalIgnoreCase)
                     .Select(g => g.First())
-                    .OrderBy(x => x.Platform)
-                    .ThenBy(x => x.Item3, StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
-                RebuildOptionsCollection(
-                    TwitchGameFilterOptions,
-                    Platform.Twitch,
-                    options.Where(x => x.platform == Platform.Twitch),
-                    _twitchGameWhitelistSlugs);
+                // Merge newly-seen games into the persistent per-platform history, rather than replacing it -
+                // otherwise the filter list would shrink to only currently-active campaigns on every refresh/relaunch.
+                foreach ((Platform platform, string slug, string displayName) in seen)
+                {
+                    Dictionary<string, string> history = platform == Platform.Twitch ? _twitchGameHistory : _kickGameHistory;
+                    if (!history.TryGetValue(slug, out string? existingName) || !string.Equals(existingName, displayName, StringComparison.Ordinal))
+                    {
+                        history[slug] = displayName;
+                        historyChanged = true;
+                    }
+                }
 
-                RebuildOptionsCollection(
-                    KickGameFilterOptions,
-                    Platform.Kick,
-                    options.Where(x => x.platform == Platform.Kick),
-                    _kickGameWhitelistSlugs);
+                List<(Platform platform, string slug, string displayName)> twitchOptions = _twitchGameHistory
+                    .Select(kv => (Platform.Twitch, kv.Key, kv.Value))
+                    .OrderBy(x => x.Item3, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                List<(Platform platform, string slug, string displayName)> kickOptions = _kickGameHistory
+                    .Select(kv => (Platform.Kick, kv.Key, kv.Value))
+                    .OrderBy(x => x.Item3, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                RebuildOptionsCollection(TwitchGameFilterOptions, Platform.Twitch, twitchOptions, _twitchGameWhitelistSlugs);
+                RebuildOptionsCollection(KickGameFilterOptions, Platform.Kick, kickOptions, _kickGameWhitelistSlugs);
             }
             finally
             {
                 _isUpdatingGameFilterOptions = false;
             }
+
+            if (historyChanged && !_isLoadingSettings)
+                Task.Run(SaveSettings);
 
             OnPropertyChanged(nameof(TwitchWhitelistSummary));
             OnPropertyChanged(nameof(KickWhitelistSummary));

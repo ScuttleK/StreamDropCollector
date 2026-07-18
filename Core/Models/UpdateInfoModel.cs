@@ -13,6 +13,13 @@ namespace Core.Models
         public string? Type { get; set; }
         [JsonPropertyName("changelog")]
         public string? Changelog { get; set; }
+        /// <summary>
+        /// SHA256 hash (lowercase hex) of the self-contained release zip for <see cref="Version"/>, published by the
+        /// release workflow. Verified by the updater before extracting a downloaded update, as defense-in-depth
+        /// beyond plain HTTPS/TLS.
+        /// </summary>
+        [JsonPropertyName("sha256")]
+        public string? Sha256 { get; set; }
         [JsonPropertyName("historic_versions")]
         public List<HistoricVersion>? HistoricVersions { get; set; }
 

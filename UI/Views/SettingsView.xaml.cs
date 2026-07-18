@@ -28,6 +28,28 @@ namespace UI.Views
                 await UpdateManager.Instance.DownloadUpdate(); // Download and apply the update
         }
 
+        private async void OnCheckForUpdatesNowClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button button)
+                button.IsEnabled = false;
+
+            try
+            {
+                bool updateAvailable = await UISettingsManager.Instance.CheckForUpdatesNowAsync();
+
+                MessageBox.Show(
+                    updateAvailable ? "A new update is available - click \"Update Now\" to install it." : "You're already on the latest version.",
+                    "Check for Updates",
+                    MessageBoxButton.OK,
+                    updateAvailable ? MessageBoxImage.Information : MessageBoxImage.None);
+            }
+            finally
+            {
+                if (sender is System.Windows.Controls.Button btn)
+                    btn.IsEnabled = true;
+            }
+        }
+
         private void OnRemoveAllAccountsButtonClick(object sender, RoutedEventArgs e)
         {
             if (MessageBox.Show("NUKE ALL ACCOUNTS AND RESTART?", "DANGER", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)

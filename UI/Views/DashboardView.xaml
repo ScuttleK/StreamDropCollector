@@ -40,6 +40,35 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
         </Style>
+
+        <!-- Small ghost icon button, e.g. the manual refresh action -->
+        <Style x:Key="RefreshIconButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -81,7 +110,24 @@
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                         CornerRadius="12" Padding="20,16">
                     <StackPanel>
-                        <TextBlock Text="MINER STATUS" Style="{StaticResource SectionLabel}" Margin="0,0,0,10"/>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="MINER STATUS" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource RefreshIconButtonStyle}"
+                                    Click="OnRefreshNowClick"
+                                    ToolTip="Refresh drops now">
+                                <Path Data="M 1,6 A 5,5 0 1 1 3,9.5 M 1,3 L 1,6 L 4,6"
+                                      Stroke="{DynamicResource TextSecondaryBrush}"
+                                      StrokeThickness="1.4"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"/>
+                            </Button>
+                        </Grid>
                         <TextBlock Text="{Binding MinerStatus, FallbackValue='Idle'}"
                                    FontSize="22" FontWeight="Bold"
                                    Foreground="{DynamicResource AccentBrush}"
@@ -729,7 +775,7 @@
                                                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0"
                                                                 Visibility="{Binding WasSkippedOffline, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                         <Ellipse Width="6" Height="6" Fill="#FFCB8E3A" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                                                        <TextBlock Text="All streamers offline · will retry in 1h" FontSize="11" Foreground="#FFCB8E3A" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="All streamers offline · will retry automatically" FontSize="11" Foreground="#FFCB8E3A" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </StackPanel>
 

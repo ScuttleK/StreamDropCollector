@@ -2,9 +2,9 @@ namespace Core.Enums
 {
     public enum MiningPriorityMode
     {
-        AvailabilityThenProgress = 0,
-        EndingSoonest = 1,
-        LeastTimeToNextReward = 2,
-        HighestCompletion = 3
+        EndingSoonest = 0,
+        LiveNowFirst = 1,
+        HighestCompletionOfDrop = 2,
+        LeastTimeToNextReward = 3
     }
 }

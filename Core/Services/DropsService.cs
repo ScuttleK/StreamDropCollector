@@ -1,6 +1,7 @@
 ﻿using Core.Interfaces;
 using Core.Models;
 using Core.Enums;
+using Core.Logging;
 
 namespace Core.Services
 {
@@ -12,7 +13,6 @@ namespace Core.Services
     public class DropsService
     {
         private readonly KickDropsProvider _kickProvider = new();
-        private TwitchDropsProvider? _twitchProvider;
 
         /// <summary>
         /// Retrieves all active drops campaigns from connected Kick and Twitch hosts asynchronously.
@@ -37,9 +37,15 @@ namespace Core.Services
 
             if (twitchStatus == ConnectionStatus.Connected)
             {
-                _twitchProvider = new TwitchDropsProvider(gqlService!);
-
-                tasks.Add(_twitchProvider.GetActiveCampaignsAsync(twitchHost, ct));
+                if (gqlService == null)
+                {
+                    AppLogger.Warn("DropsService", "Twitch reports Connected but no GQL service was provided; skipping Twitch campaign fetch for this cycle.");
+                }
+                else
+                {
+                    TwitchDropsProvider twitchProvider = new(gqlService);
+                    tasks.Add(twitchProvider.GetActiveCampaignsAsync(twitchHost, ct));
+                }
             }
 
             // If nothing to do -> return fast

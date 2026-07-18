@@ -447,6 +447,12 @@
                             </ComboBox>
                         </StackPanel>
 
+                        <Button Content="Check for Updates Now"
+                            Style="{StaticResource AccentButtonStyle}"
+                            HorizontalAlignment="Left"
+                            Click="OnCheckForUpdatesNowClick"
+                            Margin="0,0,0,16"/>
+
                         <!-- Status text - hidden when no update -->
                         <TextBlock Text="A new update is available, update now to experience the newest features!"
                            Foreground="{DynamicResource TextMutedBrush}"
@@ -486,11 +492,41 @@
                                       Style="{StaticResource NeonFlatComboBoxStyle}"
                                       SelectedValue="{Binding MiningPriorityMode, Mode=TwoWay}"
                                       SelectedValuePath="Tag">
-                                <ComboBoxItem Content="Availability + Progress" Tag="{x:Static enums:MiningPriorityMode.AvailabilityThenProgress}"/>
                                 <ComboBoxItem Content="Ending Soonest" Tag="{x:Static enums:MiningPriorityMode.EndingSoonest}"/>
+                                <ComboBoxItem Content="Live Now First" Tag="{x:Static enums:MiningPriorityMode.LiveNowFirst}"/>
+                                <ComboBoxItem Content="Highest Completion of Drop" Tag="{x:Static enums:MiningPriorityMode.HighestCompletionOfDrop}"/>
                                 <ComboBoxItem Content="Least Time To Next Reward" Tag="{x:Static enums:MiningPriorityMode.LeastTimeToNextReward}"/>
-                                <ComboBoxItem Content="Highest Completion" Tag="{x:Static enums:MiningPriorityMode.HighestCompletion}"/>
                             </ComboBox>
+
+                            <Border Width="18" Height="18" CornerRadius="9"
+                                    Background="{DynamicResource SurfaceMutedBrush}"
+                                    Margin="10,0,0,0"
+                                    Cursor="Help">
+                                <Border.ToolTip>
+                                    <ToolTip>
+                                        <StackPanel MaxWidth="360">
+                                            <TextBlock FontWeight="Bold" Margin="0,0,0,6" Text="Ending Soonest"/>
+                                            <TextBlock TextWrapping="Wrap" Margin="0,0,0,10"
+                                                       Text="Whichever campaign expires the soonest gets priority - so time-limited drops finish before they run out, even if another campaign is further along."/>
+
+                                            <TextBlock FontWeight="Bold" Margin="0,0,0,6" Text="Live Now First"/>
+                                            <TextBlock TextWrapping="Wrap" Margin="0,0,0,10"
+                                                       Text="Checks whether the specific streamer(s) required for a drop are actually live right now, and prioritizes campaigns that are confirmed live over ones that aren't."/>
+
+                                            <TextBlock FontWeight="Bold" Margin="0,0,0,6" Text="Highest Completion of Drop"/>
+                                            <TextBlock TextWrapping="Wrap" Margin="0,0,0,10"
+                                                       Text="Keeps watching whichever campaign's current reward is furthest along - e.g. Rust already at 50% keeps priority over Tarkov at 20%, even if Tarkov ends sooner."/>
+
+                                            <TextBlock FontWeight="Bold" Margin="0,0,0,6" Text="Least Time To Next Reward"/>
+                                            <TextBlock TextWrapping="Wrap"
+                                                       Text="Prioritizes whichever campaign needs the fewest more minutes to finish its next reward - e.g. a Rust drop needing 1 more hour beats an Overwatch drop needing 2 more hours, regardless of percentage."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </Border.ToolTip>
+                                <TextBlock Text="i" FontWeight="Bold" FontSize="11"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
                         </StackPanel>
                     </StackPanel>
                 </Border>

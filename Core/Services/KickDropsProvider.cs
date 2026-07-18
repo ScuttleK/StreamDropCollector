@@ -62,6 +62,8 @@ namespace Core.Services
 
                 foreach (JsonElement campaign in dataArray.EnumerateArray())
                 {
+                  try
+                  {
                     if (!campaign.TryGetProperty("status", out JsonElement status) || status.GetString() != "active")
                         continue;
 
@@ -149,6 +151,14 @@ namespace Core.Services
                             IsGeneralDrop: general
                         ));
                     }
+                  }
+                  catch (Exception ex)
+                  {
+                      // Don't let one malformed/unexpected campaign entry discard every other valid campaign
+                      // already parsed from this batch.
+                      string? campaignId = campaign.TryGetProperty("id", out JsonElement idEl) ? idEl.GetString() : null;
+                      AppLogger.Warn("KickDrops", $"Skipping malformed campaign entry (id={campaignId ?? "unknown"}). {ex.Message}");
+                  }
                 }
 
                 // 2. Get progress + claimed status

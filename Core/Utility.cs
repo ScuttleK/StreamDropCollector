@@ -18,18 +18,17 @@ namespace Core
         {
             try
             {
-                Process.Start(url);
+                // UseShellExecute launches the URL via the OS shell association directly (no cmd.exe/shell
+                // string parsing involved), which is both the fix for .NET Core no longer shell-executing
+                // Process.Start(string) by default and safer than the previous cmd.exe fallback below (which
+                // only escaped '&', not other shell metacharacters, in a hand-built command line).
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
             }
             catch (Exception ex)
             {
-                AppLogger.Warn("Utility", $"Process.Start direct launch failed for url '{url}'. Falling back by platform. {ex.Message}");
-                // Hack for running the above line in DOTNET Core...
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    url = url.Replace("&", "^&");
-                    Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                AppLogger.Warn("Utility", $"UseShellExecute launch failed for url '{url}'. Falling back by platform. {ex.Message}");
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     Process.Start("xdg-open", url);
                 }
@@ -49,13 +48,18 @@ namespace Core
             try
             {
                 RegistryKey key = Registry.CurrentUser.CreateSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run");
-                AppLogger.Debug("Utility", $"Registry Key Check: {key.GetValue(keyName)}");
-                AppLogger.Debug("Utility", $"Registry Key Write: \"{keyValue}\" {string.Join(" ", arguments ?? [])}");
 
-                if (arguments != null)
-                    key.SetValue(keyName, $"\"{keyValue}\" {string.Join(" ", arguments)}");
-                else
-                    key.SetValue(keyName, $"\"{keyValue}\"");
+                // Quote each argument individually - this registry value runs at every Windows login, so an
+                // unquoted argument containing a space would silently split into two arguments instead of one.
+                string quotedArgs = arguments != null
+                    ? string.Join(" ", arguments.Select(a => $"\"{a}\""))
+                    : string.Empty;
+                string command = string.IsNullOrEmpty(quotedArgs) ? $"\"{keyValue}\"" : $"\"{keyValue}\" {quotedArgs}";
+
+                AppLogger.Debug("Utility", $"Registry Key Check: {key.GetValue(keyName)}");
+                AppLogger.Debug("Utility", $"Registry Key Write: {command}");
+
+                key.SetValue(keyName, command);
 
                 key.Close();
             }

@@ -285,14 +285,12 @@ namespace UI.Views
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(TwitchExpiryText));
                 OnPropertyChanged(nameof(TwitchExpiryVisible));
-                OnPropertyChanged(nameof(TwitchExpiryIsHealthy));
                 OnPropertyChanged(nameof(TwitchExpiryIsWarning));
                 OnPropertyChanged(nameof(TwitchExpiryIsCritical));
             }
         }
         public bool TwitchExpiryVisible => _twitchCampaignEndsAt.HasValue;
         public string TwitchExpiryText => _twitchCampaignEndsAt.HasValue ? FormatExpiryText(_twitchCampaignEndsAt.Value) : string.Empty;
-        public bool TwitchExpiryIsHealthy => GetDaysRemaining(_twitchCampaignEndsAt) >= 6;
         public bool TwitchExpiryIsWarning => GetDaysRemaining(_twitchCampaignEndsAt) is >= 3 and < 6;
         public bool TwitchExpiryIsCritical => GetDaysRemaining(_twitchCampaignEndsAt) is >= 0 and < 3;
 
@@ -306,14 +304,12 @@ namespace UI.Views
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(KickExpiryText));
                 OnPropertyChanged(nameof(KickExpiryVisible));
-                OnPropertyChanged(nameof(KickExpiryIsHealthy));
                 OnPropertyChanged(nameof(KickExpiryIsWarning));
                 OnPropertyChanged(nameof(KickExpiryIsCritical));
             }
         }
         public bool KickExpiryVisible => _kickCampaignEndsAt.HasValue;
         public string KickExpiryText => _kickCampaignEndsAt.HasValue ? FormatExpiryText(_kickCampaignEndsAt.Value) : string.Empty;
-        public bool KickExpiryIsHealthy => GetDaysRemaining(_kickCampaignEndsAt) >= 6;
         public bool KickExpiryIsWarning => GetDaysRemaining(_kickCampaignEndsAt) is >= 3 and < 6;
         public bool KickExpiryIsCritical => GetDaysRemaining(_kickCampaignEndsAt) is >= 0 and < 3;
 
@@ -676,11 +672,10 @@ namespace UI.Views
                 DropsInventoryManager.Instance.UpdateCampaigns(allCampaigns, _twitchGqlService, startWatching: false);
                 DropsInventoryManager.Instance.SetUserCampaignOrder(_watchingItems.Select(i => i.Id));
 
-                // Restore pinned state (miner persists pin across refreshes)
-                string? pinned = DropsInventoryManager.Instance.PinnedCampaignId;
-                if (pinned != null)
+                // Restore pinned state (miner persists a pin per platform across refreshes)
+                foreach (string pinnedId in DropsInventoryManager.Instance.PinnedCampaignIds)
                 {
-                    var pinnedItem = _watchingItems.FirstOrDefault(i => i.Id == pinned);
+                    var pinnedItem = _watchingItems.FirstOrDefault(i => i.Id == pinnedId);
                     if (pinnedItem != null) pinnedItem.IsPinned = true;
                 }
 
@@ -703,10 +698,12 @@ namespace UI.Views
             }
             finally
             {
-                _loadDropsSemaphore.Release();
+                // Resume BEFORE releasing the semaphore, so a second refresh already waiting on it can't
+                // start its own PauseWatchingAsync() while this call's resume is still in flight.
                 _currentLoadCts = null;
                 await DropsInventoryManager.Instance.ResumeWatchingAsync();
                 AppLogger.Info("Dashboard", "Watcher resumed after campaign refresh.");
+                _loadDropsSemaphore.Release();
             }
         }
         /// <summary>
@@ -844,6 +841,17 @@ namespace UI.Views
             _ = ValidateKickCredentialsAsync();
         }
         /// <summary>
+        /// Handles the Click event for the manual refresh button on the Miner Status card, forcing an immediate
+        /// campaign reload instead of waiting for the hourly timer or a platform reconnect. This is the only
+        /// recovery path in the UI if a load previously failed or reported "Need login" while both platforms
+        /// still show Connected.
+        /// </summary>
+        private void OnRefreshNowClick(object sender, RoutedEventArgs e)
+        {
+            AppLogger.Info("Dashboard", "Manual refresh requested by user.");
+            ScheduleDropsLoad();
+        }
+        /// <summary>
         /// Handles the Click event for the Twitch login button, displaying the Twitch login window and initiating
         /// Twitch account validation.
         /// </summary>
@@ -922,7 +930,17 @@ namespace UI.Views
                                 s.IsOnline = liveSet.Contains(s.Name);
                         });
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        // Reset to "unknown" (null) rather than silently keeping a possibly-stale true/false
+                        // reading - otherwise a probe failure looks identical to a confirmed offline streamer.
+                        AppLogger.Warn("Dashboard", $"Twitch live-status check failed for campaign '{item.Name}'; marking streamers unknown. {ex.Message}");
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            foreach (var s in item.StreamerStatuses)
+                                s.IsOnline = null;
+                        });
+                    }
                 }
             }
 
@@ -951,7 +969,13 @@ namespace UI.Views
                                       && ls.ValueKind != System.Text.Json.JsonValueKind.Null;
                         await Dispatcher.InvokeAsync(() => streamer.IsOnline = isLive);
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        // Same rationale as the Twitch branch above - don't let a probe failure look like a
+                        // confirmed offline reading.
+                        AppLogger.Warn("Dashboard", $"Kick live-status check failed for streamer '{streamer.Name}'; marking unknown. {ex.Message}");
+                        await Dispatcher.InvokeAsync(() => streamer.IsOnline = null);
+                    }
                 }
             }
         }
@@ -962,7 +986,8 @@ namespace UI.Views
         private void OnActivateCampaignClick(object sender, RoutedEventArgs e)
         {
             if (((System.Windows.Controls.Button)sender).Tag is not QueueCampaignItem item) return;
-            foreach (var qi in _watchingItems) qi.IsPinned = false;
+            // Only clear pins on the same platform - Twitch and Kick each have their own independent pin.
+            foreach (var qi in _watchingItems.Where(w => w.Platform == item.Platform)) qi.IsPinned = false;
             item.IsPinned = true;
             DropsInventoryManager.Instance.SwitchCampaignCommand.Execute(item.Campaign);
         }
@@ -1213,7 +1238,6 @@ namespace UI.Views
                 return $"Ends {Campaign.EndsAt.LocalDateTime:MMM d} · {d}d left";
             }
         }
-        public bool ExpiryIsHealthy => (Campaign.EndsAt - DateTimeOffset.UtcNow).TotalDays >= 6;
         public bool ExpiryIsWarning => (Campaign.EndsAt - DateTimeOffset.UtcNow).TotalDays is >= 3 and < 6;
         public bool ExpiryIsCritical => (Campaign.EndsAt - DateTimeOffset.UtcNow).TotalDays is >= 0 and < 3;
 

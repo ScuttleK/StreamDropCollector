@@ -127,11 +127,11 @@
                         MouseLeftButtonDown="OnWindowHeaderMouseDown"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Width="28" Height="28" CornerRadius="8"
-                                Background="{DynamicResource AccentBrush}" Margin="0,0,10,0">
-                            <TextBlock Text="S" FontWeight="Bold" FontSize="14"
-                                       Foreground="White"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border Width="28" Height="28" CornerRadius="8" Margin="0,0,10,0">
+                            <Border.Clip>
+                                <RectangleGeometry RadiusX="8" RadiusY="8" Rect="0,0,28,28"/>
+                            </Border.Clip>
+                            <Image Source="/Assets/logo.png" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
                         </Border>
                         <TextBlock Text="StreamDrop" FontWeight="SemiBold" FontSize="13"
                                    Foreground="{DynamicResource TextPrimaryBrush}"
@@ -157,10 +157,30 @@
                 </StackPanel>
 
                 <!-- Version -->
-                <TextBlock Grid.Row="2"
-                           Text="{Binding VersionString, StringFormat='v{0}', FallbackValue='v1.0'}"
-                           Foreground="{DynamicResource TextMutedBrush}"
-                           FontSize="11" Margin="16,0,16,14"/>
+                <Button Grid.Row="2"
+                        Command="{Binding OpenReleasesCommand}"
+                        FontSize="11"
+                        Margin="16,0,16,14"
+                        HorizontalAlignment="Left"
+                        Cursor="Hand"
+                        ToolTip="View releases on GitHub"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Padding="0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <TextBlock x:Name="VersionText"
+                                       Text="{Binding VersionString, StringFormat='v{0}', FallbackValue='v1.0'}"
+                                       Foreground="{DynamicResource TextMutedBrush}"/>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="VersionText" Property="TextDecorations" Value="Underline"/>
+                                    <Setter TargetName="VersionText" Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
             </Grid>
         </Border>
 
@@ -197,7 +217,7 @@
              ═══════════════════════════════════════ -->
         <tb:TaskbarIcon x:Name="MyNotifyIcon"
                         IconSource="/Assets/logo.png"
-                        ToolTipText="Stream Drop Collector by tsgsOFFICIAL"
+                        ToolTipText="Stream Drop Collector"
                         DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
                         Visibility="Collapsed">
             <tb:TaskbarIcon.ContextMenu>
@@ -211,14 +231,6 @@
                     </MenuItem>
 
                     <Separator Margin="0"/>
-
-                    <MenuItem x:Name="JoinDiscord" Header="Join Discord" Command="{Binding JoinDiscordCommand}">
-                        <MenuItem.Icon>
-                            <Canvas Width="24" Height="24">
-                                <Image Source="/Assets/discord.png" Width="24" Height="24" Stretch="Uniform" Margin="6,0"/>
-                            </Canvas>
-                        </MenuItem.Icon>
-                    </MenuItem>
 
                     <MenuItem x:Name="OpenGithub" Header="Open Github" Command="{Binding OpenGithubCommand}">
                         <MenuItem.Icon>

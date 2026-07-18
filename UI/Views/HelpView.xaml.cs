@@ -20,10 +20,5 @@ namespace UI.Views
         {
             Core.Utility.LaunchWeb(e.Uri.AbsoluteUri);
         }
-
-        private void OnBuyMeCoffeeButtonClicked(object sender, RoutedEventArgs e)
-        {
-            Core.Utility.LaunchWeb("https://ko-fi.com/tsgsOFFICIAL");
-        }
     }
 }

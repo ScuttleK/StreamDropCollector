@@ -21,6 +21,9 @@ namespace Core.Services
         private string? _deviceId;
         private string? _accessToken;
         private string? _userId;
+        // Guards the four auth fields above so a concurrent RefreshHeadersAsync write can't interleave with a
+        // request build that reads them, which could otherwise send a mismatched header combination.
+        private readonly object _authSync = new();
         private readonly object _hashCacheSync = new();
         private readonly Dictionary<string, GqlHashCacheEntry> _gqlHashCache = new(StringComparer.OrdinalIgnoreCase);
         private static readonly TimeSpan _gqlHashCacheFreshnessThreshold = TimeSpan.FromHours(24);
@@ -99,26 +102,59 @@ namespace Core.Services
                         throw new InvalidOperationException("Captured Client-ID was null or empty");
                     }
 
-                    // Success! Assign and exit
-                    _clientId = clientId;
-                    _integrityToken = integrityToken;
-                    _deviceId = deviceId ?? _deviceId; // Device-ID is optional – keep old if missing
-                    _accessToken = accessToken;
+                    // Success! Assign and exit (atomically, so a concurrent request build can't read a
+                    // mismatched combination of old/new header values)
+                    lock (_authSync)
+                    {
+                        _clientId = clientId;
+                        _integrityToken = integrityToken;
+                        _deviceId = deviceId ?? _deviceId; // Device-ID is optional – keep old if missing
+                        _accessToken = accessToken;
+                    }
 
                     AppLogger.Debug("TwitchGql", $"[RefreshHeaders] Success on attempt {attempt} – Got fresh headers");
                     return;
                 }
-                catch (Exception ex) when (attempt < maxAttempts)
+                catch (Exception ex)
                 {
+                    // On the final attempt, throw a clear, actionable message instead of letting whatever
+                    // low-level exception (e.g. a bare TimeoutException) propagate raw - the previous
+                    // `when (attempt < maxAttempts)` filter meant this final-attempt case never actually
+                    // reached the informative throw that used to sit after this loop; it's inlined here now.
+                    if (attempt >= maxAttempts)
+                        throw new InvalidOperationException($"Failed to refresh headers after {maxAttempts} attempts. Last capture likely poisoned or page didn't trigger GQL requests.", ex);
+
                     AppLogger.Warn("TwitchGql", $"[RefreshHeaders] Attempt {attempt} failed: {ex.Message}. Retrying in {baseDelayMs * attempt}ms...");
 
                     // Exponential backoff: 5s -> 10s -> 15s
                     await Task.Delay(baseDelayMs * attempt, ct);
                 }
             }
-
-            // All attempts failed
-            throw new InvalidOperationException($"Failed to refresh headers after {maxAttempts} attempts. Last capture likely poisoned or page didn't trigger GQL requests.");
+        }
+        /// <summary>
+        /// Applies the current Client-ID/Client-Integrity/Authorization/X-Device-Id headers to the given request,
+        /// reading all four auth fields as a single atomic snapshot so a concurrent header refresh can't apply a
+        /// mismatched combination (e.g. a new integrity token paired with a stale access token).
+        /// </summary>
+        private void ApplyAuthHeaders(HttpRequestMessage request)
+        {
+            lock (_authSync)
+            {
+                request.Headers.TryAddWithoutValidation("Client-ID", _clientId);
+                request.Headers.TryAddWithoutValidation("Client-Integrity", _integrityToken);
+                request.Headers.TryAddWithoutValidation("Authorization", _accessToken);
+                if (!string.IsNullOrEmpty(_deviceId))
+                    request.Headers.TryAddWithoutValidation("X-Device-Id", _deviceId);
+            }
+        }
+        /// <summary>
+        /// Returns true if the client-id/integrity-token pair hasn't been captured yet and a refresh is needed,
+        /// read as a single atomic snapshot.
+        /// </summary>
+        private bool NeedsHeaderRefresh()
+        {
+            lock (_authSync)
+                return _clientId == null || _integrityToken == null;
         }
         /// <summary>
         /// Retrieves the Twitch authentication token from the browser cookie asynchronously.
@@ -157,7 +193,7 @@ namespace Core.Services
                 else
                     await _host.NavigateAsync($"https://www.twitch.tv/drops/campaigns?t={DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
 
-                string payload = await _host.CaptureGqlRequestBodyContainingAsyncWithRetry(operationName, 5000, 10, ct: ct);
+                string payload = await _host.CaptureGqlRequestBodyContainingAsyncWithRetry(operationName, 5000, 5, ct: ct);
 
                 using JsonDocument document = JsonDocument.Parse(payload);
                 JsonElement root = document.RootElement;
@@ -193,7 +229,7 @@ namespace Core.Services
 
         public async Task<List<string>> QueryLiveChannelsBySlugAsync(IReadOnlyList<string> channelLogins, string gameSlug, CancellationToken ct = default)
         {
-            if (_clientId == null || _integrityToken == null)
+            if (NeedsHeaderRefresh())
                 await RefreshHeadersAsync(ct);
 
             const string operationName = "StreamMetadata";
@@ -237,11 +273,7 @@ namespace Core.Services
                 {
                     Content = JsonContent.Create(payload)
                 };
-                request.Headers.TryAddWithoutValidation("Client-ID", _clientId);
-                request.Headers.TryAddWithoutValidation("Client-Integrity", _integrityToken);
-                request.Headers.TryAddWithoutValidation("Authorization", _accessToken);
-                if (!string.IsNullOrEmpty(_deviceId))
-                    request.Headers.TryAddWithoutValidation("X-Device-Id", _deviceId);
+                ApplyAuthHeaders(request);
 
                 HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
                 string jsonText = await response.Content.ReadAsStringAsync(ct);
@@ -255,11 +287,7 @@ namespace Core.Services
                     {
                         Content = JsonContent.Create(payload)
                     };
-                    retryRequest.Headers.TryAddWithoutValidation("Client-ID", _clientId);
-                    retryRequest.Headers.TryAddWithoutValidation("Client-Integrity", _integrityToken);
-                    retryRequest.Headers.TryAddWithoutValidation("Authorization", _accessToken);
-                    if (!string.IsNullOrEmpty(_deviceId))
-                        retryRequest.Headers.TryAddWithoutValidation("X-Device-Id", _deviceId);
+                    ApplyAuthHeaders(retryRequest);
 
                     response = await _httpClient.SendAsync(retryRequest, ct);
                     jsonText = await response.Content.ReadAsStringAsync(ct);
@@ -300,7 +328,7 @@ namespace Core.Services
         public async Task<bool> ClaimDropAsync(string campaignId, string rewardId, CancellationToken ct = default)
         {
             AppLogger.Info("TwitchGql", $"ClaimDrop started. campaignId={campaignId}, rewardId={rewardId}");
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await RefreshHeadersAsync(ct));
+            await await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await RefreshHeadersAsync(ct));
 
             // Step 1. Construct the payload, according to the above format
             string operationName = "DropsPage_ClaimDropRewards";
@@ -336,12 +364,7 @@ namespace Core.Services
             {
                 Content = JsonContent.Create(payload)
             };
-            request.Headers.TryAddWithoutValidation("Client-ID", _clientId);
-            request.Headers.TryAddWithoutValidation("Client-Integrity", _integrityToken);
-            request.Headers.TryAddWithoutValidation("Authorization", _accessToken);
-
-            if (!string.IsNullOrEmpty(_deviceId))
-                request.Headers.TryAddWithoutValidation("X-Device-Id", _deviceId);
+            ApplyAuthHeaders(request);
 
             HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
             string jsonText = await response.Content.ReadAsStringAsync(ct);
@@ -390,13 +413,7 @@ namespace Core.Services
             {
                 Content = JsonContent.Create(payload)
             };
-
-            request.Headers.TryAddWithoutValidation("Client-ID", _clientId);
-            request.Headers.TryAddWithoutValidation("Client-Integrity", _integrityToken);
-            request.Headers.TryAddWithoutValidation("Authorization", _accessToken);
-
-            if (!string.IsNullOrEmpty(_deviceId))
-                request.Headers.TryAddWithoutValidation("X-Device-Id", _deviceId);
+            ApplyAuthHeaders(request);
 
             HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
             string jsonText = await response.Content.ReadAsStringAsync(ct);
@@ -414,13 +431,7 @@ namespace Core.Services
                 {
                     Content = JsonContent.Create(payload)
                 };
-
-                newRequest.Headers.TryAddWithoutValidation("Client-ID", _clientId);
-                newRequest.Headers.TryAddWithoutValidation("Client-Integrity", _integrityToken);
-                newRequest.Headers.TryAddWithoutValidation("Authorization", _accessToken);
-
-                if (!string.IsNullOrEmpty(_deviceId))
-                    newRequest.Headers.TryAddWithoutValidation("X-Device-Id", _deviceId);
+                ApplyAuthHeaders(newRequest);
 
                 response = await _httpClient.SendAsync(newRequest, ct);
                 jsonText = await response.Content.ReadAsStringAsync(ct);
@@ -452,7 +463,7 @@ namespace Core.Services
         /// included in the dictionary.</returns>
         public async Task<Dictionary<string, JsonObject>> QueryDropCampaignDetailsBatchAsync(IReadOnlyList<(string dropID, string channelLogin)> requests, CancellationToken ct = default)
         {
-            if (_clientId == null || _integrityToken == null)
+            if (NeedsHeaderRefresh())
                 await RefreshHeadersAsync(ct);
 
             // 1. Get the REAL current hash
@@ -471,20 +482,10 @@ namespace Core.Services
                 {
                     Content = JsonContent.Create(payload)
                 };
-
-                request.Headers.TryAddWithoutValidation("Client-ID", _clientId);
-                request.Headers.TryAddWithoutValidation("Client-Integrity", _integrityToken);
-                request.Headers.TryAddWithoutValidation("Authorization", _accessToken);
-                if (!string.IsNullOrEmpty(_deviceId))
-                    request.Headers.TryAddWithoutValidation("X-Device-Id", _deviceId);
+                ApplyAuthHeaders(request);
 
                 HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
                 string jsonText = await response.Content.ReadAsStringAsync(ct);
-
-                // print the payload as json text for debugging
-                AppLogger.Debug("TwitchGql", request.Content != null
-                    ? await request.Content.ReadAsStringAsync(ct)
-                    : "No request content");
 
                 // Auto-retry on integrity fail
                 if (!response.IsSuccessStatusCode || jsonText.Contains("\"errors\""))
@@ -499,12 +500,7 @@ namespace Core.Services
                     {
                         Content = JsonContent.Create(payload)
                     };
-
-                    retryRequest.Headers.TryAddWithoutValidation("Client-ID", _clientId);
-                    retryRequest.Headers.TryAddWithoutValidation("Client-Integrity", _integrityToken);
-                    retryRequest.Headers.TryAddWithoutValidation("Authorization", _accessToken);
-                    if (!string.IsNullOrEmpty(_deviceId))
-                        retryRequest.Headers.TryAddWithoutValidation("X-Device-Id", _deviceId);
+                    ApplyAuthHeaders(retryRequest);
 
                     response = await _httpClient.SendAsync(retryRequest, ct);
                     jsonText = await response.Content.ReadAsStringAsync(ct);
@@ -570,7 +566,7 @@ namespace Core.Services
             string payloadJson;
             try
             {
-                payloadJson = await _host.CaptureGqlRequestBodyContainingAsyncWithRetry("DropCampaignDetails", 8000, 10, clickScript, ct);
+                payloadJson = await _host.CaptureGqlRequestBodyContainingAsyncWithRetry("DropCampaignDetails", 8000, 5, clickScript, ct);
             }
             catch (Exception ex) when (allowCached && TryGetCachedHash(operationName, requireFresh: false, out string? fallbackHash))
             {
