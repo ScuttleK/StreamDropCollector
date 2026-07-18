@@ -34,6 +34,16 @@ jobs:
             - name: Zip (Framework-Dependent)
               run: Compress-Archive -Path publish/framework-dependent/* -DestinationPath StreamDropCollector-${{ github.ref_name }}-framework-dependent.zip
 
+            - name: Copy under a fixed "latest" filename
+              shell: pwsh
+              run: |
+                  # Same content as the versioned zips above, just under a filename that never changes -
+                  # so "…/releases/latest/download/StreamDropCollector-latest-self-contained.zip" is a
+                  # permanent link that always serves whatever's newest, without anyone needing to know
+                  # (or update) a version number.
+                  Copy-Item "StreamDropCollector-${{ github.ref_name }}-self-contained.zip" "StreamDropCollector-latest-self-contained.zip"
+                  Copy-Item "StreamDropCollector-${{ github.ref_name }}-framework-dependent.zip" "StreamDropCollector-latest-framework-dependent.zip"
+
             - name: Publish SHA256 to updateInfo.sdc
               shell: pwsh
               run: |
@@ -70,6 +80,10 @@ jobs:
                   $notes = @"
                   Self-contained build (no .NET install needed) and a framework-dependent build (requires the .NET 10 runtime) are both attached below.
 
+                  **Permanent download links** (always point at the newest release, no version number needed):
+                  - [Self-contained (recommended)](https://github.com/Scuttle-ZapAccess/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-self-contained.zip)
+                  - [Framework-dependent](https://github.com/Scuttle-ZapAccess/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-framework-dependent.zip)
+
                   [Installation guide](https://github.com/Scuttle-ZapAccess/StreamDropCollector?tab=readme-ov-file#quick-start)
 
                   Create an issue on GitHub with any feedback or bugs.
@@ -79,6 +93,8 @@ jobs:
                   gh release create "${{ github.ref_name }}" `
                     "StreamDropCollector-${{ github.ref_name }}-self-contained.zip" `
                     "StreamDropCollector-${{ github.ref_name }}-framework-dependent.zip" `
+                    "StreamDropCollector-latest-self-contained.zip" `
+                    "StreamDropCollector-latest-framework-dependent.zip" `
                     --title "StreamDropCollector ${{ github.ref_name }}" `
                     --verify-tag `
                     --notes $notes
