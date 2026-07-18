@@ -13,5 +13,6 @@
       "type": "Release",
       "changelog": "Initial release."
     }
-  ]
+  ],
+  "sha256": "9b73aab4653bc8ffe1c6a6334b465a53062ba44fa5fb24a0e505110d5e61e626"
 }
