@@ -20,6 +20,7 @@ namespace Core.Managers
         public event PropertyChangedEventHandler? PropertyChanged;
         public event Action<MiningPriorityMode>? MiningPriorityModeChanged;
         public event Action<Platform>? GameWhitelistChanged;
+        public event Action? PriorityQueueChanged;
         private static readonly string _settingsFilePath = Path.Combine(Environment.ExpandEnvironmentVariables("%APPDATA%"), "Stream Drop Collector", "Settings.json");
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
@@ -29,9 +30,10 @@ namespace Core.Managers
         // === SETTINGS PROPERTIES ===
         private bool _startWithWindows;
         private bool _minimizeToTrayOnStartup;
+        private bool _minimizeToTray = true;
         private bool _runInBackground;
         private string _theme = "System";
-        private UpdateFrequency _updateFrequency = UpdateFrequency.Daily;
+        private UpdateFrequency _updateFrequency = UpdateFrequency.OnLaunch;
         private bool _autoClaimRewards = true;
         private bool _notifyOnReadyToClaim;
         private bool _notifyOnAutoClaimed = true;
@@ -44,11 +46,17 @@ namespace Core.Managers
         private List<string> _kickGameWhitelistSlugs = new List<string>();
         private bool _twitchGameFilterBlacklistMode;
         private bool _kickGameFilterBlacklistMode;
+        private bool _priorityQueueEnabled;
         private bool _isUpdatingGameFilterOptions;
         private bool _isLoadingSettings;
 
         public ObservableCollection<GameFilterOption> TwitchGameFilterOptions { get; } = new ObservableCollection<GameFilterOption>();
         public ObservableCollection<GameFilterOption> KickGameFilterOptions { get; } = new ObservableCollection<GameFilterOption>();
+        /// <summary>
+        /// Ordered list of game names the user wants prioritized over the normal mining priority mode. Index 0 is the
+        /// highest priority. Entries are matched case-insensitively against a campaign's game name.
+        /// </summary>
+        public ObservableCollection<string> PriorityQueueGames { get; } = new ObservableCollection<string>();
 
         /// <summary>
         /// Gets or sets a value indicating whether the application starts automatically when Windows starts.
@@ -98,6 +106,17 @@ namespace Core.Managers
         {
             get => _runInBackground;
             set => SetField(ref _runInBackground, value);
+        }
+        /// <summary>
+        /// Gets or sets a value indicating whether minimizing the main window sends it to the system tray.
+        /// </summary>
+        /// <remarks>When enabled, clicking the window's minimize button hides it from the taskbar and
+        /// Alt+Tab, leaving only the tray icon. When disabled, minimizing behaves like a normal window and stays
+        /// visible on the Windows taskbar.</remarks>
+        public bool MinimizeToTray
+        {
+            get => _minimizeToTray;
+            set => SetField(ref _minimizeToTray, value);
         }
         /// <summary>
         /// Gets or sets the name of the current application theme.
@@ -284,6 +303,84 @@ namespace Core.Managers
             }
         }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether the named Priority Queue overrides the normal mining priority mode.
+        /// </summary>
+        public bool PriorityQueueEnabled
+        {
+            get => _priorityQueueEnabled;
+            set
+            {
+                if (SetField(ref _priorityQueueEnabled, value))
+                    PriorityQueueChanged?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// Adds a game to the end of the Priority Queue. No-ops if the name is blank or already present
+        /// (case-insensitive).
+        /// </summary>
+        /// <param name="gameName">The exact game name to prioritize, as it appears on the campaign (e.g. "Rust").</param>
+        public void AddPriorityQueueGame(string gameName)
+        {
+            string trimmed = gameName?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(trimmed))
+                return;
+
+            if (PriorityQueueGames.Contains(trimmed, StringComparer.OrdinalIgnoreCase))
+                return;
+
+            PriorityQueueGames.Add(trimmed);
+
+            if (!_isLoadingSettings)
+            {
+                Task.Run(SaveSettings);
+                PriorityQueueChanged?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// Removes a game from the Priority Queue (case-insensitive match).
+        /// </summary>
+        public void RemovePriorityQueueGame(string gameName)
+        {
+            string? match = PriorityQueueGames.FirstOrDefault(g => string.Equals(g, gameName, StringComparison.OrdinalIgnoreCase));
+            if (match == null)
+                return;
+
+            PriorityQueueGames.Remove(match);
+            Task.Run(SaveSettings);
+            PriorityQueueChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Moves a game one position earlier (higher priority) in the Priority Queue.
+        /// </summary>
+        public void MovePriorityQueueGameUp(string gameName)
+        {
+            int index = PriorityQueueGames.IndexOf(gameName);
+            if (index <= 0)
+                return;
+
+            PriorityQueueGames.Move(index, index - 1);
+            Task.Run(SaveSettings);
+            PriorityQueueChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Moves a game one position later (lower priority) in the Priority Queue.
+        /// </summary>
+        public void MovePriorityQueueGameDown(string gameName)
+        {
+            int index = PriorityQueueGames.IndexOf(gameName);
+            if (index < 0 || index >= PriorityQueueGames.Count - 1)
+                return;
+
+            PriorityQueueGames.Move(index, index + 1);
+            Task.Run(SaveSettings);
+            PriorityQueueChanged?.Invoke();
+        }
+
         private UISettingsManager()
         {
             LoadSettings();
@@ -366,7 +463,7 @@ namespace Core.Managers
 
                     client.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
 
-                    serverUpdateInfo = JsonSerializer.Deserialize<UpdateInfo>(await client.GetStringAsync("https://raw.githubusercontent.com/tsgsOFFICIAL/StreamDropCollector/master/updateInfo.sdc")) ?? new UpdateInfo();
+                    serverUpdateInfo = JsonSerializer.Deserialize<UpdateInfo>(await client.GetStringAsync("https://raw.githubusercontent.com/Scuttle-ZapAccess/StreamDropCollector/master/updateInfo.sdc")) ?? new UpdateInfo();
                 }
                 catch (Exception ex)
                 {
@@ -405,6 +502,7 @@ namespace Core.Managers
                 {
                     StartWithWindows = settings.StartWithWindows;
                     MinimizeToTrayOnStartup = settings.MinimizeToTrayOnStartup;
+                    MinimizeToTray = settings.MinimizeToTray;
                     RunInBackground = settings.RunInBackground;
                     Theme = settings.Theme ?? "System";
                     UpdateFrequency = settings.UpdateFrequency;
@@ -419,6 +517,11 @@ namespace Core.Managers
                     _kickGameWhitelistSlugs = NormalizeWhitelist(settings.KickGameWhitelistSlugs);
                     _twitchGameFilterBlacklistMode = settings.TwitchGameFilterBlacklistMode;
                     _kickGameFilterBlacklistMode = settings.KickGameFilterBlacklistMode;
+                    PriorityQueueEnabled = settings.PriorityQueueEnabled;
+
+                    PriorityQueueGames.Clear();
+                    foreach (string game in settings.PriorityQueueGames ?? [])
+                        PriorityQueueGames.Add(game);
                 }
             }
             catch (Exception ex) when (ex is JsonException || ex is IOException || ex is UnauthorizedAccessException)
@@ -451,6 +554,7 @@ namespace Core.Managers
                 {
                     StartWithWindows = StartWithWindows,
                     MinimizeToTrayOnStartup = MinimizeToTrayOnStartup,
+                    MinimizeToTray = MinimizeToTray,
                     RunInBackground = RunInBackground,
                     Theme = Theme,
                     UpdateFrequency = UpdateFrequency,
@@ -464,7 +568,9 @@ namespace Core.Managers
                     TwitchGameWhitelistSlugs = [.. _twitchGameWhitelistSlugs],
                     KickGameWhitelistSlugs = [.. _kickGameWhitelistSlugs],
                     TwitchGameFilterBlacklistMode = _twitchGameFilterBlacklistMode,
-                    KickGameFilterBlacklistMode = _kickGameFilterBlacklistMode
+                    KickGameFilterBlacklistMode = _kickGameFilterBlacklistMode,
+                    PriorityQueueEnabled = PriorityQueueEnabled,
+                    PriorityQueueGames = [.. PriorityQueueGames]
                 };
 
                 string json = JsonSerializer.Serialize(settings, _jsonOptions);
@@ -592,7 +698,37 @@ namespace Core.Managers
 
             OnPropertyChanged(nameof(TwitchWhitelistSummary));
             OnPropertyChanged(nameof(KickWhitelistSummary));
+            OnPropertyChanged(nameof(KnownGameNames));
         }
+
+        /// <summary>
+        /// A curated list of popular games that commonly run Twitch/Kick drop campaigns, offered as suggestions even
+        /// before the app has seen a live campaign for them.
+        /// </summary>
+        private static readonly string[] _popularDropGames =
+        [
+            "Albion Online", "Apex Legends", "Call of Duty: Warzone", "Counter-Strike 2", "Deadlock",
+            "Destiny 2", "Diablo IV", "Dota 2", "Escape from Tarkov", "Fortnite", "Genshin Impact",
+            "Honkai: Star Rail", "League of Legends", "Lost Ark", "Marvel Rivals", "Naraka: Bladepoint",
+            "New World", "Once Human", "Overwatch 2", "Path of Exile", "Path of Exile 2",
+            "PUBG: Battlegrounds", "Rust", "Sea of Thieves", "Smite 2", "Throne and Liberty",
+            "Valorant", "Warframe", "World of Warcraft"
+        ];
+
+        /// <summary>
+        /// Gets the set of selectable game name suggestions for the Priority Queue: a curated list of popular
+        /// drop-enabled games, merged with every game display name seen across active Twitch and Kick campaigns.
+        /// </summary>
+        public IEnumerable<string> KnownGameNames => _popularDropGames
+            .Concat(TwitchGameFilterOptions
+                .Where(o => !o.DisplayName.EndsWith(" (inactive)", StringComparison.OrdinalIgnoreCase))
+                .Select(o => o.DisplayName))
+            .Concat(KickGameFilterOptions
+                .Where(o => !o.DisplayName.EndsWith(" (inactive)", StringComparison.OrdinalIgnoreCase))
+                .Select(o => o.DisplayName))
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase);
 
         public void ClearGameWhitelist(Platform platform)
         {

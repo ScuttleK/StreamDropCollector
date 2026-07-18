@@ -131,7 +131,7 @@
                                   Fill="{DynamicResource AccentBrush}" Width="25" Height="25" Margin="0,0,12,0"/>
                             <TextBlock FontSize="16" VerticalAlignment="Center">
                                 <Hyperlink Style="{StaticResource NeonHyperlink}"
-                                           NavigateUri="https://github.com/tsgsOFFICIAL/StreamDropCollector"
+                                           NavigateUri="https://github.com/Scuttle-ZapAccess/StreamDropCollector"
                                            RequestNavigate="Hyperlink_RequestNavigate">
                                     GitHub Repository
                                 </Hyperlink>

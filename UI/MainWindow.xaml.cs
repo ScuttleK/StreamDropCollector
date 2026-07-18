@@ -97,7 +97,7 @@ namespace UI
             // Initialize commands
             ToggleWindowCommand = new RelayCommand(o => ToggleWindowState());
             CloseCommand = new RelayCommand(o => CloseApplication());
-            OpenGithubCommand = new RelayCommand(o => Core.Utility.LaunchWeb("https://github.com/tsgsOFFICIAL/StreamDropCollector"));
+            OpenGithubCommand = new RelayCommand(o => Core.Utility.LaunchWeb("https://github.com/Scuttle-ZapAccess/StreamDropCollector"));
             JoinDiscordCommand = new RelayCommand(o => Core.Utility.LaunchWeb("https://discord.gg/Cddu5aJ"));
 
             // Event handler for double-click on TaskbarIcon
@@ -500,7 +500,10 @@ namespace UI
         /// <param name="e"></param>
         private void OnMinimizeButtonClicked(object sender, RoutedEventArgs e)
         {
-            EnterTrayMode();
+            if (UISettingsManager.Instance.MinimizeToTray)
+                EnterTrayMode();
+            else
+                WindowState = WindowState.Minimized;
         }
         /// <summary>
         /// Event handler for when the maximize button is clicked

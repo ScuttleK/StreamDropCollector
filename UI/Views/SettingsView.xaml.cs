@@ -90,5 +90,39 @@ namespace UI.Views
         {
             UISettingsManager.Instance.ClearGameWhitelist(Platform.Kick);
         }
+
+        private void OnAddPriorityQueueGameClick(object sender, RoutedEventArgs e)
+        {
+            string gameName = PriorityGameComboBox.Text;
+            UISettingsManager.Instance.AddPriorityQueueGame(gameName);
+            PriorityGameComboBox.Text = string.Empty;
+        }
+
+        private void OnPriorityGameComboBoxKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key != System.Windows.Input.Key.Enter)
+                return;
+
+            OnAddPriorityQueueGameClick(sender, e);
+            e.Handled = true;
+        }
+
+        private void OnRemovePriorityQueueGameClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement { Tag: string gameName })
+                UISettingsManager.Instance.RemovePriorityQueueGame(gameName);
+        }
+
+        private void OnMovePriorityQueueGameUpClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement { Tag: string gameName })
+                UISettingsManager.Instance.MovePriorityQueueGameUp(gameName);
+        }
+
+        private void OnMovePriorityQueueGameDownClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement { Tag: string gameName })
+                UISettingsManager.Instance.MovePriorityQueueGameDown(gameName);
+        }
     }
 }

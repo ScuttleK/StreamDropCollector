@@ -36,6 +36,22 @@ namespace Core.Services
                 string userId = activeCampaigns["data"]?["currentUser"]?["id"]?.GetValue<string>() ?? "";
                 gql.UserId = userId;
 
+                AppLogger.Info("TwitchDrops", $"Raw campaigns returned by currentUser.dropCampaigns: count={campaigns?.Count ?? 0}");
+
+                foreach (JsonObject rawCampaignObj in (campaigns ?? new JsonArray()).OfType<JsonObject>())
+                {
+                    string rawId = rawCampaignObj.TryGetPropertyValue("id", out JsonNode? rawIdNode) ? rawIdNode?.GetValue<string>() ?? "?" : "?";
+                    string rawName = rawCampaignObj.TryGetPropertyValue("name", out JsonNode? rawNameNode) ? rawNameNode?.GetValue<string>() ?? "?" : "?";
+                    string rawGame = rawCampaignObj.TryGetPropertyValue("game", out JsonNode? rawGameNode) && rawGameNode is JsonObject rawGameObj
+                        ? rawGameObj["displayName"]?.GetValue<string>() ?? "?"
+                        : "?";
+                    string rawStatus = rawCampaignObj.TryGetPropertyValue("status", out JsonNode? rawStatusNode) ? rawStatusNode?.GetValue<string>() ?? "?" : "?";
+                    bool rawConnected = rawCampaignObj.TryGetPropertyValue("self", out JsonNode? rawSelfNode) && rawSelfNode is JsonObject rawSelfObj
+                        && rawSelfObj.TryGetPropertyValue("isAccountConnected", out JsonNode? rawConnectedNode) && rawConnectedNode?.GetValue<bool>() == true;
+
+                    AppLogger.Info("TwitchDrops", $"Candidate campaign: id={rawId}, name='{rawName}', game='{rawGame}', status={rawStatus}, isAccountConnected={rawConnected}");
+                }
+
                 campaigns?.RemoveAll(campaign =>
                 {
                     if (campaign is not JsonObject campaignObj)

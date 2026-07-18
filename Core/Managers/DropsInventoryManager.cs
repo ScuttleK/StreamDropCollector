@@ -125,6 +125,7 @@ namespace Core.Managers
             LoadPinnedCampaignFromDisk();
             UISettingsManager.Instance.MiningPriorityModeChanged += OnMiningPriorityModeChanged;
             UISettingsManager.Instance.GameWhitelistChanged += OnGameWhitelistChanged;
+            UISettingsManager.Instance.PriorityQueueChanged += OnPriorityQueueChanged;
 
             _liveProgressTimer.Elapsed += OnLiveProgressTick;
             _liveProgressTimer.AutoReset = true;
@@ -145,6 +146,14 @@ namespace Core.Managers
         private void OnGameWhitelistChanged(Platform platform)
         {
             _ = ApplyGameWhitelistChangeAsync(platform);
+        }
+        /// <summary>
+        /// Handles changes to the Priority Queue (enabled state or entry order) by triggering an immediate
+        /// re-evaluation of active campaigns.
+        /// </summary>
+        private void OnPriorityQueueChanged()
+        {
+            _ = ApplyPriorityQueueChangeAsync();
         }
         /// <summary>
         /// Applies a change to the mining priority mode and triggers an immediate re-evaluation of active campaigns if
@@ -233,6 +242,44 @@ namespace Core.Managers
             catch (Exception ex)
             {
                 AppLogger.Error("Miner", "Failed to apply game whitelist change immediately.", ex);
+            }
+        }
+        /// <summary>
+        /// Applies a change to the Priority Queue and triggers an immediate re-evaluation of active campaigns if
+        /// applicable.
+        /// </summary>
+        /// <remarks>If the miner is paused, there are no active campaigns, or no webviews are
+        /// initialized, the re-evaluation is skipped.</remarks>
+        private async Task ApplyPriorityQueueChangeAsync()
+        {
+            try
+            {
+                AppLogger.Info("Miner", "Priority Queue changed. Triggering immediate re-evaluation.");
+
+                if (_isPaused)
+                {
+                    AppLogger.Warn("Miner", "Priority Queue changed while miner is paused; re-evaluation skipped.");
+                    return;
+                }
+
+                if (!ActiveCampaigns.Any())
+                {
+                    AppLogger.Warn("Miner", "Priority Queue changed but there are no active campaigns; re-evaluation skipped.");
+                    return;
+                }
+
+                if (TwitchWebView == null && KickWebView == null)
+                {
+                    AppLogger.Warn("Miner", "Priority Queue changed but no webviews are initialized; re-evaluation skipped.");
+                    return;
+                }
+
+                await StartWatchingStreams(true);
+                AppLogger.Info("Miner", "Immediate re-evaluation completed after Priority Queue change.");
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Miner", "Failed to apply Priority Queue change immediately.", ex);
             }
         }
         /// <summary>
@@ -1235,6 +1282,23 @@ namespace Core.Managers
             List<DropsCampaign> candidates = _skippedCampaignIds.Count > 0
                 ? [.. campaigns.Where(c => !_skippedCampaignIds.Contains(c.Id))]
                 : campaigns;
+
+            // Honor the named Priority Queue (Settings) ahead of the user's queue order and mining priority mode -
+            // the first entry with a currently available candidate always wins.
+            if (UISettingsManager.Instance.PriorityQueueEnabled)
+            {
+                foreach (string priorityGame in UISettingsManager.Instance.PriorityQueueGames)
+                {
+                    DropsCampaign? priorityMatch = candidates.FirstOrDefault(c => string.Equals(c.GameName, priorityGame, StringComparison.OrdinalIgnoreCase));
+                    if (priorityMatch != null)
+                    {
+                        AppLogger.Info("Selection", $"Selected campaign '{priorityMatch.Name}' ({priorityMatch.Id}) via Priority Queue entry '{priorityGame}'.");
+                        return Task.FromResult<DropsCampaign?>(priorityMatch);
+                    }
+                }
+
+                AppLogger.Debug("Selection", "Priority Queue enabled but no candidate matched any entry; falling back to normal selection.");
+            }
 
             // If the user has defined a custom queue order, respect it
             if (_userOrderedCampaignIds.Count > 0)

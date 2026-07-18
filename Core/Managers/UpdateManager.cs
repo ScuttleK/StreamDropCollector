@@ -10,7 +10,7 @@ namespace Core.Managers
         private static readonly Lazy<UpdateManager> _instance = new(() => new UpdateManager());
         public static UpdateManager Instance => _instance.Value;
 
-        private readonly string _repositoryOwner = "tsgsOFFICIAL";
+        private readonly string _repositoryOwner = "Scuttle-ZapAccess";
         private readonly string _repositoryName = "StreamDropCollector";
         private readonly string _folderPath = "UI/bin/Release/net10.0-windows10.0.17763.0/publish/win-x64";
 

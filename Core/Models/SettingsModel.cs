@@ -6,6 +6,7 @@ namespace Core.Models
     {
         public bool StartWithWindows { get; set; }
         public bool MinimizeToTrayOnStartup { get; set; }
+        public bool MinimizeToTray { get; set; } = true;
         public bool RunInBackground { get; set; }
         public string? Theme { get; set; }
         public UpdateFrequency UpdateFrequency { get; set; }
@@ -22,5 +23,7 @@ namespace Core.Models
         public List<string> KickGameWhitelistSlugs { get; set; } = new List<string>();
         public bool TwitchGameFilterBlacklistMode { get; set; }
         public bool KickGameFilterBlacklistMode { get; set; }
+        public bool PriorityQueueEnabled { get; set; }
+        public List<string> PriorityQueueGames { get; set; } = new List<string>();
     }
 }

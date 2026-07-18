@@ -81,31 +81,37 @@
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="8"/>
-                            <ToggleButton x:Name="ToggleButton"
-                                          Background="Transparent"
-                                          BorderBrush="Transparent"
-                                          BorderThickness="0"
-                                          Focusable="False"
-                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
-                                <ToggleButton.Template>
-                                    <ControlTemplate>
-                                        <Border Background="Transparent"/>
-                                    </ControlTemplate>
-                                </ToggleButton.Template>
-                            </ToggleButton>
-                            <ContentPresenter x:Name="ContentSite"
-                                              Margin="{TemplateBinding Padding}"
-                                              VerticalAlignment="Center"
-                                              HorizontalAlignment="Left"
-                                              Content="{TemplateBinding SelectionBoxItem}"/>
-                            <Path x:Name="Arrow"
-                                  Data="M 0,0 L 6,6 L 12,0 Z"
-                                  Fill="{DynamicResource TextMutedBrush}"
-                                  Width="10" Height="6"
-                                  HorizontalAlignment="Right"
-                                  VerticalAlignment="Center"
-                                  Margin="0,0,14,0"/>
+                                    CornerRadius="8"
+                                    SnapsToDevicePixels="True">
+                                <Grid>
+                                    <ToggleButton x:Name="ToggleButton"
+                                                  Background="Transparent"
+                                                  BorderBrush="Transparent"
+                                                  BorderThickness="0"
+                                                  Focusable="False"
+                                                  IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                        <ToggleButton.Template>
+                                            <ControlTemplate>
+                                                <Border Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </ToggleButton.Template>
+                                    </ToggleButton>
+                                    <ContentPresenter x:Name="ContentSite"
+                                                      Margin="{TemplateBinding Padding}"
+                                                      VerticalAlignment="Center"
+                                                      HorizontalAlignment="Left"
+                                                      IsHitTestVisible="False"
+                                                      Content="{TemplateBinding SelectionBoxItem}"/>
+                                    <Path x:Name="Arrow"
+                                          Data="M 0,0 L 6,6 L 12,0 Z"
+                                          Fill="{DynamicResource TextMutedBrush}"
+                                          Width="10" Height="6"
+                                          HorizontalAlignment="Right"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,14,0"
+                                          IsHitTestVisible="False"/>
+                                </Grid>
+                            </Border>
                             <Popup x:Name="Popup"
                                    Placement="Bottom"
                                    IsOpen="{TemplateBinding IsDropDownOpen}"
@@ -191,6 +197,125 @@
             </Setter>
         </Style>
 
+        <!-- EDITABLE NEON COMBOBOX - supports free text entry alongside the dropdown list -->
+        <Style x:Key="EditableNeonComboBoxStyle" TargetType="ComboBox" BasedOn="{StaticResource NeonFlatComboBoxStyle}">
+            <Setter Property="IsEditable" Value="True"/>
+            <Setter Property="IsTextSearchEnabled" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="MainBorder"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="8"
+                                    SnapsToDevicePixels="True">
+                                <Grid>
+                                    <ToggleButton x:Name="ToggleButton"
+                                                  Background="Transparent"
+                                                  BorderBrush="Transparent"
+                                                  BorderThickness="0"
+                                                  Focusable="False"
+                                                  IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                        <ToggleButton.Template>
+                                            <ControlTemplate>
+                                                <Border Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </ToggleButton.Template>
+                                    </ToggleButton>
+                                    <ContentPresenter x:Name="ContentSite"
+                                                      Margin="{TemplateBinding Padding}"
+                                                      VerticalAlignment="Center"
+                                                      HorizontalAlignment="Left"
+                                                      Visibility="Collapsed"
+                                                      IsHitTestVisible="False"
+                                                      Content="{TemplateBinding SelectionBoxItem}"/>
+                                    <TextBox x:Name="PART_EditableTextBox"
+                                             Margin="{TemplateBinding Padding}"
+                                             VerticalAlignment="Center"
+                                             HorizontalAlignment="Stretch"
+                                             Background="Transparent"
+                                             Foreground="{TemplateBinding Foreground}"
+                                             CaretBrush="{DynamicResource AccentBrush}"
+                                             BorderThickness="0"
+                                             Focusable="True"
+                                             IsReadOnly="{TemplateBinding IsReadOnly}"/>
+                                    <Path x:Name="Arrow"
+                                          Data="M 0,0 L 6,6 L 12,0 Z"
+                                          Fill="{DynamicResource TextMutedBrush}"
+                                          Width="10" Height="6"
+                                          HorizontalAlignment="Right"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,14,0"
+                                          IsHitTestVisible="False"/>
+                                </Grid>
+                            </Border>
+                            <Popup x:Name="Popup"
+                                   Placement="Bottom"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Slide">
+                                <Border Background="{DynamicResource CardBackgroundBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="2"
+                                        CornerRadius="8"
+                                        MinWidth="{TemplateBinding ActualWidth}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <ScrollViewer Padding="4" BorderThickness="0">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="MainBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Arrow" Property="Fill" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsDropDownOpen" Value="True">
+                                <Setter TargetName="MainBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Arrow" Property="Fill" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- COMPACT ICON BUTTON - for inline row actions (reorder / remove) -->
+        <Style x:Key="IconButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- ACCENT BUTTON -->
         <Style x:Key="AccentButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
@@ -255,7 +380,12 @@
 
                         <CheckBox IsChecked="{Binding RunInBackground, Mode=TwoWay}"
                                   Style="{StaticResource ModernCheckBoxStyle}"
-                                  Content="Keep running when window is closed"/>
+                                  Content="Keep running when window is closed"
+                                  Margin="0,0,0,12"/>
+
+                        <CheckBox IsChecked="{Binding MinimizeToTray, Mode=TwoWay}"
+                                  Style="{StaticResource ModernCheckBoxStyle}"
+                                  Content="Minimizing the application minimizes it to tray"/>
                     </StackPanel>
                 </Border>
 
@@ -437,6 +567,120 @@
                                 Style="{StaticResource AccentButtonStyle}"
                                 HorizontalAlignment="Left"
                                 Click="OnClearKickWhitelistClick"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- PRIORITY QUEUE -->
+                <Border Background="{DynamicResource CardBackgroundBrush}"
+                        CornerRadius="10" Padding="24" Margin="0,0,0,24"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <CheckBox IsChecked="{Binding PriorityQueueEnabled, Mode=TwoWay}"
+                                  Style="{StaticResource ModernCheckBoxStyle}"
+                                  FontSize="18" FontWeight="SemiBold"
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  Content="Priority Queue"
+                                  Margin="0,0,0,8"/>
+                        <TextBlock Text="When enabled, the first listed game with an available drop always starts before anything else, regardless of mining priority. Reorder with the arrows - top is highest priority."
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,12"/>
+
+                        <StackPanel IsEnabled="{Binding PriorityQueueEnabled}"
+                                    Opacity="{Binding PriorityQueueEnabled, Converter={StaticResource BooleanToOpacityConverter}}">
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <ComboBox x:Name="PriorityGameComboBox"
+                                          Width="260"
+                                          Height="40"
+                                          Style="{StaticResource EditableNeonComboBoxStyle}"
+                                          ItemsSource="{Binding KnownGameNames}"
+                                          Margin="0,0,12,0"
+                                          KeyDown="OnPriorityGameComboBoxKeyDown"/>
+                                <Button Content="Add"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        Height="40" MinWidth="90"
+                                        Click="OnAddPriorityQueueGameClick"/>
+                            </StackPanel>
+                            <TextBlock Text="Pick a suggestion or type any game name exactly as it appears on the campaign, then click Add."
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,12"/>
+
+                            <Border Background="{DynamicResource MainBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="8">
+                                <ListBox ItemsSource="{Binding PriorityQueueGames}"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         HorizontalContentAlignment="Stretch"
+                                         MaxHeight="260">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="4,4,4,4" HorizontalAlignment="Stretch">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{Binding}"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                                           VerticalAlignment="Center"/>
+
+                                                <Button Grid.Column="1" Tag="{Binding}"
+                                                        Click="OnMovePriorityQueueGameUpClick"
+                                                        Style="{StaticResource IconButtonStyle}"
+                                                        Margin="0,0,6,0"
+                                                        ToolTip="Move up (higher priority)">
+                                                    <Path Data="M 3,8 L 7,4 L 11,8"
+                                                          Stroke="{DynamicResource TextSecondaryBrush}"
+                                                          StrokeThickness="2"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round"/>
+                                                </Button>
+                                                <Button Grid.Column="2" Tag="{Binding}"
+                                                        Click="OnMovePriorityQueueGameDownClick"
+                                                        Style="{StaticResource IconButtonStyle}"
+                                                        Margin="0,0,6,0"
+                                                        ToolTip="Move down (lower priority)">
+                                                    <Path Data="M 3,4 L 7,8 L 11,4"
+                                                          Stroke="{DynamicResource TextSecondaryBrush}"
+                                                          StrokeThickness="2"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round"/>
+                                                </Button>
+                                                <Button Grid.Column="3" Tag="{Binding}"
+                                                        Click="OnRemovePriorityQueueGameClick"
+                                                        Style="{StaticResource IconButtonStyle}"
+                                                        ToolTip="Remove">
+                                                    <Path Data="M 3,3 L 11,11 M 11,3 L 3,11"
+                                                          Stroke="{DynamicResource DangerBrush}"
+                                                          StrokeThickness="2"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round"/>
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="Padding" Value="0"/>
+                                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                </ListBox>
+                            </Border>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 
