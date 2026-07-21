@@ -37,8 +37,12 @@ namespace UI.Views
             {
                 bool updateAvailable = await UISettingsManager.Instance.CheckForUpdatesNowAsync();
 
+                string message = updateAvailable
+                    ? $"A new update is available - click \"Update Now\" to install it.\n\nWhat's new:\n{UISettingsManager.Instance.LatestChangelogText}"
+                    : "You're already on the latest version.";
+
                 MessageBox.Show(
-                    updateAvailable ? "A new update is available - click \"Update Now\" to install it." : "You're already on the latest version.",
+                    message,
                     "Check for Updates",
                     MessageBoxButton.OK,
                     updateAvailable ? MessageBoxImage.Information : MessageBoxImage.None);

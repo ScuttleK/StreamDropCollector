@@ -41,6 +41,7 @@ namespace Core.Managers
         private bool _notifyOnDropStarted;
         private bool _verboseDebugLogging;
         private bool _updateAvailable = false;
+        private List<string> _latestChangelog = new();
         private bool _notifyOnNewUpdateAvailable = true;
         private DateTime? _lastUpdateCheck = null;
         private MiningPriorityMode _miningPriorityMode = MiningPriorityMode.EndingSoonest;
@@ -263,7 +264,12 @@ namespace Core.Managers
                 SetField(ref _updateAvailable, value);
 
                 if (value && NotifyOnNewUpdateAvailable)
-                    NotificationManager.ShowNotification("Update Available", "A new version is available.");
+                {
+                    string teaser = _latestChangelog.Count > 0
+                        ? _latestChangelog[0]
+                        : "Check Settings for what's new.";
+                    NotificationManager.ShowNotification("Update Available", teaser);
+                }
             }
         }
         /// <summary>
@@ -279,6 +285,20 @@ namespace Core.Managers
         /// Gets a value indicating whether update notifications are enabled.
         /// </summary>
         public bool IsUpdateNotificationEnabled => UpdateFrequency != UpdateFrequency.Never;
+
+        /// <summary>
+        /// The bullet-point changelog for the version <see cref="UpdateAvailable"/> refers to, as published in
+        /// updateInfo.sdc's "changelog" array - the same list rendered on the GitHub release page itself.
+        /// </summary>
+        public IReadOnlyList<string> LatestChangelog => _latestChangelog.AsReadOnly();
+
+        /// <summary>
+        /// <see cref="LatestChangelog"/> pre-formatted as a single bullet-point block, ready to drop straight into
+        /// a TextBlock or MessageBox.
+        /// </summary>
+        public string LatestChangelogText => _latestChangelog.Count == 0
+            ? string.Empty
+            : string.Join(Environment.NewLine, _latestChangelog.Select(item => $"• {item}"));
 
         public string TwitchWhitelistSummary => _twitchGameWhitelistSlugs.Count == 0
             ? "All active Twitch games are allowed"
@@ -515,10 +535,18 @@ namespace Core.Managers
                 return;
             }
 
-            if (Version.TryParse(serverUpdateInfo.Version, out Version? serverVersion) && Version.TryParse(localVersionInfo.FileVersion, out Version? localVersion))
-                UpdateAvailable = serverVersion > localVersion;
-            else
-                UpdateAvailable = false;
+            bool isNewer = Version.TryParse(serverUpdateInfo.Version, out Version? serverVersion) &&
+                Version.TryParse(localVersionInfo.FileVersion, out Version? localVersion) &&
+                serverVersion > localVersion;
+
+            // Populate the changelog before flipping UpdateAvailable - its setter fires the "Update
+            // Available" notification and reads _latestChangelog for a teaser, so this needs to be
+            // ready first.
+            _latestChangelog = isNewer ? (serverUpdateInfo.Changelog ?? new List<string>()) : new List<string>();
+            OnPropertyChanged(nameof(LatestChangelog));
+            OnPropertyChanged(nameof(LatestChangelogText));
+
+            UpdateAvailable = isNewer;
 
             _lastUpdateCheck = DateTime.Now;
             SaveSettings();

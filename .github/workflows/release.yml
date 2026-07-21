@@ -86,15 +86,14 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  # updateInfo.sdc's "changelog" field is the maintainer-written description of this
-                  # release - surface it in the GitHub release body too, not just the in-app updater.
-                  $changelog = (Get-Content updateInfo.sdc -Raw | ConvertFrom-Json).changelog
+                  # updateInfo.sdc's "changelog" array is the maintainer-written bullet list for this
+                  # release - this is the ONE place it's authored; both the GitHub release body and the
+                  # in-app "Check for Updates" changelog read from it, so keep this format (a bullet list,
+                  # "### Changelog" heading) stable - it's relied on by both.
+                  $changelogItems = (Get-Content updateInfo.sdc -Raw | ConvertFrom-Json).changelog
+                  $changelog = ($changelogItems | ForEach-Object { "- $_" }) -join "`n"
 
                   $notes = @"
-                  ## What's new
-
-                  $changelog
-
                   An installer (recommended) and portable self-contained/framework-dependent builds are all attached below.
 
                   **Permanent download links** (always point at the newest release, no version number needed):
@@ -105,6 +104,9 @@ jobs:
                   [Installation guide](https://github.com/Scuttle-ZapAccess/StreamDropCollector?tab=readme-ov-file#quick-start)
 
                   Create an issue on GitHub with any feedback or bugs.
+
+                  ### Changelog
+                  $changelog
 
                   **Full Changelog**: https://github.com/Scuttle-ZapAccess/StreamDropCollector/compare/${{ steps.prev_tag.outputs.tag }}...${{ github.ref_name }}
                   "@

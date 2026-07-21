@@ -11,8 +11,12 @@ namespace Core.Models
         public string? Version { get; set; }
         [JsonPropertyName("type")]
         public string? Type { get; set; }
+        /// <summary>
+        /// One bullet point per entry - mirrors the "### Changelog" bullet-list format used on the GitHub
+        /// release page itself, so the same list can be rendered in either place.
+        /// </summary>
         [JsonPropertyName("changelog")]
-        public string? Changelog { get; set; }
+        public List<string>? Changelog { get; set; }
         /// <summary>
         /// SHA256 hash (lowercase hex) of the self-contained release zip for <see cref="Version"/>, published by the
         /// release workflow. Verified by the updater before extracting a downloaded update, as defense-in-depth
@@ -33,7 +37,7 @@ namespace Core.Models
             [JsonPropertyName("type")]
             public string? Type { get; set; }
             [JsonPropertyName("changelog")]
-            public string? Changelog { get; set; }
+            public List<string>? Changelog { get; set; }
         }
     }
 }
