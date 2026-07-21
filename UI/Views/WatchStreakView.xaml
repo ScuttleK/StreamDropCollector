@@ -1,0 +1,307 @@
+<UserControl x:Class="UI.Views.WatchStreakView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:behaviors="clr-namespace:UI.Behaviors"
+             mc:Ignorable="d"
+             d:DesignHeight="800" d:DesignWidth="900"
+             Background="{DynamicResource MainBackgroundBrush}">
+
+    <UserControl.Resources>
+        <!-- ACCENT BUTTON -->
+        <Style x:Key="AccentButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="10"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              TextBlock.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- COMPACT ICON BUTTON - for the per-row remove action -->
+        <Style x:Key="IconButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- TITLE -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,8">
+            <TextBlock Text="Watch Streak"
+                       FontSize="30"
+                       FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock Text="Queue streamers here. Once a channel goes live, it's watched in the background for about 5 minutes to earn the Watch Streak channel-points bonus, claimed automatically."
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap"
+                       MaxWidth="800"
+                       Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <!-- AVAILABILITY CHECK FREQUENCY + REFRESH -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,4,0,4" VerticalAlignment="Center">
+            <TextBlock Text="Availability Check Frequency:"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       VerticalAlignment="Center"
+                       Margin="0,0,10,0"/>
+            <!--
+                Plain, unstyled ComboBox (no custom Style/Template), same reasoning as the plain
+                TextBox above: guaranteed-correct native rendering over a custom template we'd have to
+                build and trust untested.
+            -->
+            <ComboBox x:Name="PollIntervalComboBox"
+                      Width="170" Height="34"
+                      VerticalContentAlignment="Center"
+                      Margin="0,0,16,0"
+                      SelectionChanged="PollIntervalComboBox_SelectionChanged">
+                <ComboBoxItem Content="Every 10 minutes" Tag="600"/>
+                <ComboBoxItem Content="Every 30 minutes" Tag="1800"/>
+                <ComboBoxItem Content="Every hour" Tag="3600"/>
+                <ComboBoxItem Content="Every 3 hours" Tag="10800"/>
+            </ComboBox>
+            <Button Content="Refresh Now"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Height="34" MinWidth="110"
+                    Click="RefreshButton_Click"
+                    ToolTip="Immediately re-check every queued streamer's online/offline status"/>
+        </StackPanel>
+
+        <!-- ADD STREAMER -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource CardBackgroundBrush}"
+                CornerRadius="12" Padding="20" Margin="0,12,0,20"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Border Width="360" Height="40"
+                            Background="{DynamicResource MainBackgroundBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            CornerRadius="10" Margin="0,0,12,0">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <!--
+                            Plain, un-templated TextBox (no custom Style/Template) so it uses WPF's own
+                            default rendering for the text content, which is guaranteed to work, unlike
+                            the shared "Input" style in Colors.xaml, which turned out to render input text
+                            invisibly and (per a repo-wide search) had never actually been used by any other
+                            view before, so the bug had never been caught. All the visual styling here comes
+                            from the wrapping Border instead.
+                        -->
+                        <TextBox x:Name="StreamerUrlInput"
+                                 Background="Transparent"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                 CaretBrush="{DynamicResource AccentBrush}"
+                                 BorderThickness="0"
+                                 FontSize="13"
+                                 Padding="12,0"
+                                 VerticalContentAlignment="Center"
+                                 KeyDown="StreamerUrlInput_KeyDown"/>
+                    </Border>
+                    <Button Content="Add to Queue"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Height="40" MinWidth="120"
+                            Click="AddButton_Click"/>
+                </StackPanel>
+                <TextBlock Text="Enter the streamer's full Twitch URL, e.g. https://www.twitch.tv/streamername - not just their name."
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="12"
+                           Margin="0,10,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- QUEUE -->
+        <Border Grid.Row="3"
+                Background="{DynamicResource CardBackgroundBrush}"
+                CornerRadius="12" Padding="20"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+            <Grid>
+                <TextBlock x:Name="EmptyQueueHint"
+                           Text="No streamers queued yet - add one above."
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Top"
+                           Margin="0,24,0,0"/>
+
+                <ListBox x:Name="StreamerList"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         HorizontalContentAlignment="Stretch"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         behaviors:ScrollBubbling.PassThrough="True">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <ContentPresenter/>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{DynamicResource MainBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="16,12"
+                                    Margin="0,0,0,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{Binding ChannelLogin}"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="15"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+
+                                        <!-- Watching / waiting-for-first-check / live-but-ineligible / error -->
+                                        <TextBlock Text="{Binding PrimaryStatusText}"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   FontSize="13"
+                                                   Margin="0,4,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding PrimaryStatusText}" Value="">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
+                                        <!-- Live/offline check currently in flight for this streamer -->
+                                        <TextBlock Text="Checking..."
+                                                   Foreground="Gold"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="13"
+                                                   Margin="0,4,0,0"
+                                                   Visibility="{Binding IsCheckingNow, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                                        <!-- Confirmed online (but not currently watching, since it
+                                             already completed for today/this session) -->
+                                        <StackPanel Orientation="Horizontal"
+                                                    Margin="0,4,0,0"
+                                                    Visibility="{Binding IsConfirmedOnline, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="Online"
+                                                       Foreground="{DynamicResource SuccessBrush}"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="13"/>
+                                            <TextBlock Text="{Binding OnlineLastCheckedText, StringFormat=' - {0}'}"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       FontSize="13"/>
+                                        </StackPanel>
+
+                                        <!-- Confirmed offline -->
+                                        <StackPanel Orientation="Horizontal"
+                                                    Margin="0,4,0,0"
+                                                    Visibility="{Binding IsConfirmedOffline, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="Offline"
+                                                       Foreground="{DynamicResource DangerBrush}"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="13"/>
+                                            <TextBlock Text="{Binding OfflineLastCheckedText, StringFormat=' - {0}'}"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       FontSize="13"/>
+                                        </StackPanel>
+
+                                        <!-- Last time the Watch Streak bonus was actually completed -->
+                                        <TextBlock Text="{Binding LastCompletedText}"
+                                                   FontSize="13"
+                                                   Margin="0,4,0,0"
+                                                   Visibility="{Binding HasCompletedBefore, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="Gold"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsLastCompletedToday}" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="1"
+                                            Style="{StaticResource IconButtonStyle}"
+                                            Click="RemoveButton_Click"
+                                            ToolTip="Remove from queue">
+                                        <Path Data="M 3,3 L 11,11 M 11,3 L 3,11"
+                                              Stroke="{DynamicResource DangerBrush}"
+                                              StrokeThickness="2"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"/>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

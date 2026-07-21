@@ -204,6 +204,16 @@ namespace UI
                         break;
                 }
             }
+
+            // Skip on the automated restart flows above (self-update, --minimize) - only show this
+            // on a genuine first launch by a human.
+            bool isAutomatedRestart = args.Any(a =>
+                a.Equals("--updating", StringComparison.OrdinalIgnoreCase) ||
+                a.Equals("--updated", StringComparison.OrdinalIgnoreCase) ||
+                a.Equals("--minimize", StringComparison.OrdinalIgnoreCase));
+
+            if (!isAutomatedRestart && !UISettingsManager.Instance.HasCompletedOnboarding)
+                new OnboardingWindow { Owner = this }.ShowDialog();
         }
 
         /// <summary>
@@ -264,6 +274,7 @@ namespace UI
                 "Dashboard" => _currentPage is DashboardView ? _currentPage : DashboardView.Instance,
                 "Inventory" => _currentPage is InventoryView ? _currentPage : InventoryView.Instance,
                 "Settings" => _currentPage is SettingsView ? _currentPage : SettingsView.Instance,
+                "WatchStreak" => _currentPage is WatchStreakView ? _currentPage : WatchStreakView.Instance,
                 "Help" => _currentPage is HelpView ? _currentPage : HelpView.Instance,
                 _ => null
             };

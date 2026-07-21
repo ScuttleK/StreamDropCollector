@@ -98,6 +98,25 @@
                     </StackPanel>
                 </Border>
 
+                <!-- BROWSER EXTENSION -->
+                <Border Background="{DynamicResource CardBackgroundBrush}"
+                        CornerRadius="12" Padding="28" Margin="0,0,0,32"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Browser Extension (Optional)" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Style="{StaticResource BodyText}">
+                            A companion Chrome extension that automatically claims Drops, Moments, and Channel Points bonuses while you browse Twitch directly - separate from this app, not a replacement for it. It's hosted in a private repo, so downloading it will prompt a GitHub login.
+                        </TextBlock>
+                        <TextBlock FontSize="16">
+                            <Hyperlink Style="{StaticResource NeonHyperlink}"
+                                       NavigateUri="https://github.com/Scuttle-ZapAccess/automatic-twitch-ext-fork/releases/latest"
+                                       RequestNavigate="Hyperlink_RequestNavigate">
+                                Download the Browser Extension &#8594;
+                            </Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
                 <!-- SUPPORT & COMMUNITY -->
                 <Border Background="{DynamicResource CardBackgroundBrush}"
                         CornerRadius="12" Padding="28"

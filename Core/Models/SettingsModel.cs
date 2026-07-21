@@ -4,6 +4,7 @@ namespace Core.Models
 {
     internal class SettingsModel
     {
+        public bool HasCompletedOnboarding { get; set; }
         public bool StartWithWindows { get; set; }
         public bool MinimizeToTrayOnStartup { get; set; }
         public bool MinimizeToTray { get; set; } = true;
@@ -13,6 +14,7 @@ namespace Core.Models
         public bool AutoClaimRewards { get; set; }
         public bool NotifyOnReadyToClaim { get; set; }
         public bool NotifyOnAutoClaimed { get; set; }
+        public bool NotifyOnDropStarted { get; set; }
         public bool VerboseDebugLogging { get; set; }
         public bool UpdateAvailable { get; set; }
         public bool NotifyOnNewUpdateAvailable { get; set; }

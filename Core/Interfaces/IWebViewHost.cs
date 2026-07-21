@@ -106,6 +106,17 @@ namespace Core.Interfaces
         /// period.</returns>
         Task<string> CaptureGqlRequestBodyContainingAsyncWithRetry(string triggerText, int timeoutMs, int maxRetries = 3, string? preCaptureJs = null, CancellationToken ct = default);
         /// <summary>
+        /// Passively listens for a GraphQL <b>response</b> whose body contains the specified trigger text, without
+        /// triggering any navigation itself. Unlike the request-capture methods above, the caller is expected to
+        /// already be sitting on a page where the relevant GraphQL traffic happens naturally on its own (e.g. a live
+        /// channel page, whose own scripts periodically poll for channel points state).
+        /// </summary>
+        /// <param name="triggerText">Text to search for within the response body.</param>
+        /// <param name="timeoutMs">Maximum time, in milliseconds, to wait before giving up.</param>
+        /// <param name="ct">A cancellation token that can be used to cancel the operation.</param>
+        /// <returns>The matching response body, or null if no matching response arrived within the timeout.</returns>
+        Task<string?> CaptureGqlResponseBodyContainingAsync(string triggerText, int timeoutMs, CancellationToken ct = default);
+        /// <summary>
         /// Attempts to claim a reward from a Kick drop campaign using the specified campaign and reward identifiers.
         /// </summary>
         /// <param name="campaignId">The unique identifier of the Kick drop campaign from which to claim the reward. Cannot be null or empty.</param>

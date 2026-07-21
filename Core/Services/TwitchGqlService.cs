@@ -315,6 +315,137 @@ namespace Core.Services
             return liveMatches;
         }
         /// <summary>
+        /// Checks whether a single channel is currently live, with no game-category filter -- unlike
+        /// <see cref="QueryLiveChannelsBySlugAsync"/>, which requires a matching game slug and would never match a
+        /// channel outside a specific drop campaign's game. Used by Watch Streak, which isn't tied to any campaign.
+        /// </summary>
+        public async Task<bool> IsChannelLiveAsync(string channelLogin, CancellationToken ct = default)
+        {
+            if (NeedsHeaderRefresh())
+                await RefreshHeadersAsync(ct);
+
+            const string operationName = "StreamMetadata";
+            const string hash = "b57f9b910f8cd1a4659d894fe7550ccc81ec9052c01e438b290fd66a040b9b93";
+            SetCachedHash(operationName, hash);
+
+            JsonArray payload = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["operationName"] = operationName,
+                    ["variables"] = new JsonObject
+                    {
+                        ["channelLogin"] = channelLogin,
+                        ["includeIsDJ"] = true
+                    },
+                    ["extensions"] = new JsonObject
+                    {
+                        ["persistedQuery"] = new JsonObject
+                        {
+                            ["version"] = 1,
+                            ["sha256Hash"] = hash
+                        }
+                    }
+                }
+            };
+
+            using HttpRequestMessage request = new(HttpMethod.Post, "https://gql.twitch.tv/gql")
+            {
+                Content = JsonContent.Create(payload)
+            };
+            ApplyAuthHeaders(request);
+
+            HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
+            string jsonText = await response.Content.ReadAsStringAsync(ct);
+
+            if (!response.IsSuccessStatusCode || jsonText.Contains("\"errors\""))
+            {
+                AppLogger.Warn("TwitchGql", $"IsChannelLive failed for {channelLogin}. Refreshing headers and retrying.");
+                await RefreshHeadersAsync(ct);
+
+                using HttpRequestMessage retryRequest = new(HttpMethod.Post, "https://gql.twitch.tv/gql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+                ApplyAuthHeaders(retryRequest);
+
+                response = await _httpClient.SendAsync(retryRequest, ct);
+                jsonText = await response.Content.ReadAsStringAsync(ct);
+            }
+
+            response.EnsureSuccessStatusCode();
+            JsonNode? stream = JsonNode.Parse(jsonText)?[0]?["data"]?["user"]?["stream"];
+            string? type = stream?["type"]?.GetValue<string>();
+
+            return type == "live";
+        }
+        /// <summary>
+        /// Claims a pending community points bonus (e.g. Watch Streak) for a channel. The persisted query hash below
+        /// was recovered from the ClaimCommunityPoints mutation used by the "Automatic Twitch" browser extension,
+        /// which intercepts the same mutation Twitch's own web client sends when the bonus button is clicked.
+        /// </summary>
+        public async Task<int?> ClaimCommunityPointsAsync(string channelId, string claimId, CancellationToken ct = default)
+        {
+            AppLogger.Info("TwitchGql", $"ClaimCommunityPoints started. channelId={channelId}, claimId={claimId}");
+
+            if (NeedsHeaderRefresh())
+                await RefreshHeadersAsync(ct);
+
+            const string operationName = "ClaimCommunityPoints";
+            const string hash = "46aaeebe02c99afdf4fc97c7c0cba964124bf6b0af229395f1f6d1feed05b3d0";
+            SetCachedHash(operationName, hash);
+
+            JsonArray payload = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["operationName"] = operationName,
+                    ["variables"] = new JsonObject
+                    {
+                        ["input"] = new JsonObject
+                        {
+                            ["channelID"] = channelId,
+                            ["claimID"] = claimId
+                        }
+                    },
+                    ["extensions"] = new JsonObject
+                    {
+                        ["persistedQuery"] = new JsonObject
+                        {
+                            ["version"] = 1,
+                            ["sha256Hash"] = hash
+                        }
+                    }
+                }
+            };
+
+            using HttpRequestMessage request = new(HttpMethod.Post, "https://gql.twitch.tv/gql")
+            {
+                Content = JsonContent.Create(payload)
+            };
+            ApplyAuthHeaders(request);
+
+            HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
+            string jsonText = await response.Content.ReadAsStringAsync(ct);
+
+            if (!response.IsSuccessStatusCode || jsonText.Contains("\"errors\""))
+            {
+                AppLogger.Warn("TwitchGql", $"ClaimCommunityPoints failed. status={(int)response.StatusCode}, hasErrors={jsonText.Contains("\"errors\"")}");
+                return null;
+            }
+
+            JsonNode? claim = JsonNode.Parse(jsonText)?[0]?["data"]?["claimCommunityPoints"]?["claim"];
+            if (claim == null)
+            {
+                AppLogger.Warn("TwitchGql", "ClaimCommunityPoints returned no claim -- likely already claimed or expired.");
+                return null;
+            }
+
+            int pointsEarned = claim["pointsEarnedTotal"]?.GetValue<int>() ?? 0;
+            AppLogger.Info("TwitchGql", $"ClaimCommunityPoints completed. pointsEarned={pointsEarned}");
+            return pointsEarned;
+        }
+        /// <summary>
         /// Attempts to claim a Twitch drop reward for the specified campaign and reward identifiers asynchronously.
         /// </summary>
         /// <remarks>Returns <see langword="false"/> if the claim request fails or if the response

@@ -151,6 +151,9 @@
                     <RadioButton Content="Settings"  Tag="Settings"  GroupName="Nav"
                                  Click="SidebarButton_Click"
                                  Style="{StaticResource NavButtonStyle}"/>
+                    <RadioButton Content="Watch Streak" Tag="WatchStreak" GroupName="Nav"
+                                 Click="SidebarButton_Click"
+                                 Style="{StaticResource NavButtonStyle}"/>
                     <RadioButton Content="Help"      Tag="Help"      GroupName="Nav"
                                  Click="SidebarButton_Click"
                                  Style="{StaticResource NavButtonStyle}"/>

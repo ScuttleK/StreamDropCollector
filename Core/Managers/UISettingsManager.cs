@@ -28,6 +28,7 @@ namespace Core.Managers
         };
 
         // === SETTINGS PROPERTIES ===
+        private bool _hasCompletedOnboarding;
         private bool _startWithWindows;
         private bool _minimizeToTrayOnStartup;
         private bool _minimizeToTray = true;
@@ -37,6 +38,7 @@ namespace Core.Managers
         private bool _autoClaimRewards = true;
         private bool _notifyOnReadyToClaim;
         private bool _notifyOnAutoClaimed = true;
+        private bool _notifyOnDropStarted;
         private bool _verboseDebugLogging;
         private bool _updateAvailable = false;
         private bool _notifyOnNewUpdateAvailable = true;
@@ -62,6 +64,15 @@ namespace Core.Managers
         /// </summary>
         public ObservableCollection<string> PriorityQueueGames { get; } = new ObservableCollection<string>();
 
+        /// <summary>
+        /// Gets or sets a value indicating whether the user has completed (or skipped) the first-run Quick Setup
+        /// onboarding window.
+        /// </summary>
+        public bool HasCompletedOnboarding
+        {
+            get => _hasCompletedOnboarding;
+            set => SetField(ref _hasCompletedOnboarding, value);
+        }
         /// <summary>
         /// Gets or sets a value indicating whether the application starts automatically when Windows starts.
         /// </summary>
@@ -223,6 +234,15 @@ namespace Core.Managers
                 else
                     SetField(ref _notifyOnAutoClaimed, value);
             }
+        }
+        /// <summary>
+        /// Gets or sets a value indicating whether a notification should be sent when the app starts actively
+        /// watching a new streamer for a drop campaign.
+        /// </summary>
+        public bool NotifyOnDropStarted
+        {
+            get => _notifyOnDropStarted;
+            set => SetField(ref _notifyOnDropStarted, value);
         }
         /// <summary>
         /// Gets or sets a value indicating whether verbose diagnostic logging is enabled.
@@ -522,6 +542,7 @@ namespace Core.Managers
 
                 if (settings != null)
                 {
+                    HasCompletedOnboarding = settings.HasCompletedOnboarding;
                     StartWithWindows = settings.StartWithWindows;
                     MinimizeToTrayOnStartup = settings.MinimizeToTrayOnStartup;
                     MinimizeToTray = settings.MinimizeToTray;
@@ -532,6 +553,7 @@ namespace Core.Managers
                     MiningPriorityMode = settings.MiningPriorityMode;
                     NotifyOnReadyToClaim = settings.NotifyOnReadyToClaim;
                     NotifyOnAutoClaimed = settings.NotifyOnAutoClaimed;
+                    NotifyOnDropStarted = settings.NotifyOnDropStarted;
                     VerboseDebugLogging = settings.VerboseDebugLogging;
                     NotifyOnNewUpdateAvailable = settings.NotifyOnNewUpdateAvailable;
                     _lastUpdateCheck = settings.LastUpdateCheck;
@@ -582,6 +604,7 @@ namespace Core.Managers
 
                 SettingsModel settings = new SettingsModel
                 {
+                    HasCompletedOnboarding = HasCompletedOnboarding,
                     StartWithWindows = StartWithWindows,
                     MinimizeToTrayOnStartup = MinimizeToTrayOnStartup,
                     MinimizeToTray = MinimizeToTray,
@@ -592,6 +615,7 @@ namespace Core.Managers
                     MiningPriorityMode = MiningPriorityMode,
                     NotifyOnReadyToClaim = NotifyOnReadyToClaim,
                     NotifyOnAutoClaimed = NotifyOnAutoClaimed,
+                    NotifyOnDropStarted = NotifyOnDropStarted,
                     VerboseDebugLogging = VerboseDebugLogging,
                     NotifyOnNewUpdateAvailable = NotifyOnNewUpdateAvailable,
                     LastUpdateCheck = _lastUpdateCheck,

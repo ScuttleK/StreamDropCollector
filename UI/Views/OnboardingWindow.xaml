@@ -1,0 +1,411 @@
+<Window x:Class="UI.Views.OnboardingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:enums="clr-namespace:Core.Enums;assembly=Core"
+        mc:Ignorable="d"
+        Title="Quick Setup"
+        Width="480" Height="680"
+        ResizeMode="NoResize"
+        WindowStyle="None"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="{DynamicResource MainBackgroundBrush}"
+        Closing="OnWindowClosing">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome GlassFrameThickness="1" ResizeBorderThickness="0" CaptionHeight="0"/>
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+
+        <Style x:Key="OnboardingCloseButton" TargetType="Button">
+            <Setter Property="Background"       Value="Transparent"/>
+            <Setter Property="Foreground"       Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="FontSize"         Value="13"/>
+            <Setter Property="Width"            Value="40"/>
+            <Setter Property="Height"           Value="40"/>
+            <Setter Property="BorderThickness"  Value="0"/>
+            <Setter Property="Cursor"           Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#E81123"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Skip / Back text-link style -->
+        <Style x:Key="LinkButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <TextBlock Text="{TemplateBinding Content}"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   FontSize="{TemplateBinding FontSize}"
+                                   TextDecorations="Underline"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Same ComboBox skin used in SettingsView, copied locally since it's not a shared/global style -->
+        <Style x:Key="OnboardingComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="Padding" Value="10,0,30,0"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="MainBorder"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="8"
+                                    SnapsToDevicePixels="True">
+                                <Grid>
+                                    <ToggleButton x:Name="ToggleButton"
+                                                  Background="Transparent"
+                                                  BorderBrush="Transparent"
+                                                  BorderThickness="0"
+                                                  Focusable="False"
+                                                  IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                        <ToggleButton.Template>
+                                            <ControlTemplate>
+                                                <Border Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </ToggleButton.Template>
+                                    </ToggleButton>
+                                    <ContentPresenter x:Name="ContentSite"
+                                                      Margin="{TemplateBinding Padding}"
+                                                      VerticalAlignment="Center"
+                                                      HorizontalAlignment="Left"
+                                                      IsHitTestVisible="False"
+                                                      Content="{TemplateBinding SelectionBoxItem}"/>
+                                    <Path Data="M 0,0 L 6,6 L 12,0 Z"
+                                          Fill="{DynamicResource TextMutedBrush}"
+                                          Width="10" Height="6"
+                                          HorizontalAlignment="Right"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,14,0"
+                                          IsHitTestVisible="False"/>
+                                </Grid>
+                            </Border>
+                            <Popup x:Name="Popup"
+                                   Placement="Bottom"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Slide">
+                                <Border Background="{DynamicResource CardBackgroundBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="2"
+                                        CornerRadius="8"
+                                        MinWidth="{TemplateBinding ActualWidth}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <ScrollViewer Padding="4" BorderThickness="0">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="MainBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsDropDownOpen" Value="True">
+                                <Setter TargetName="MainBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Padding" Value="12,8"/>
+                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBoxItem">
+                                    <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}" CornerRadius="6">
+                                        <ContentPresenter/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBrush}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ComboBoxItem.SelectedBackground}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource ComboBoxItem.SelectedForeground}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Window.Resources>
+
+    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="44"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Title bar -->
+            <Border Grid.Row="0"
+                    Background="{DynamicResource CardBackgroundBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="0,0,0,1"
+                    MouseLeftButtonDown="OnTitleBarMouseDown">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                        <Image Source="/Assets/logo.png" Width="18" Height="18" Margin="0,0,8,0"/>
+                        <TextBlock Text="Stream Drop Collector — Quick Setup"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   FontSize="12" FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button Content="✕" Click="OnCloseButtonClick"
+                            Style="{StaticResource OnboardingCloseButton}"
+                            HorizontalAlignment="Right"/>
+                </Grid>
+            </Border>
+
+            <!-- Content -->
+            <Grid Grid.Row="1" Margin="32,24,32,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,18">
+                    <Image Source="/Assets/logo.png" Width="56" Height="56" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="StepLabel" Text="Step 1/4"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               FontSize="13" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                </StackPanel>
+
+                <!-- STEP 1: Welcome -->
+                <StackPanel x:Name="Step1Panel" Grid.Row="1">
+                    <TextBlock Text="Welcome to Stream Drop Collector"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               FontSize="20" FontWeight="Bold"
+                               TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="0,0,0,10"/>
+                    <TextBlock Text="Let's get you set up in a few quick steps. You can change any of this later in Settings."
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="13" TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="0,0,0,28"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="Theme" Foreground="{DynamicResource TextMutedBrush}"
+                                   VerticalAlignment="Center" Width="90"/>
+                        <ComboBox Width="200"
+                                  Style="{StaticResource OnboardingComboBoxStyle}"
+                                  SelectedValue="{Binding Theme, Mode=TwoWay}"
+                                  SelectedValuePath="Content">
+                            <ComboBoxItem Content="Dark"/>
+                            <ComboBoxItem Content="Light"/>
+                            <ComboBoxItem Content="System"/>
+                        </ComboBox>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- STEP 2: Connect accounts -->
+                <StackPanel x:Name="Step2Panel" Grid.Row="1" Visibility="Collapsed">
+                    <TextBlock Text="Connect your accounts"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               FontSize="20" FontWeight="Bold"
+                               TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="0,0,0,10"/>
+                    <TextBlock Text="A window will open for you to log in. Once you're logged in, close that window and we'll check your connection automatically."
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="13" TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="0,0,0,24"/>
+
+                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            CornerRadius="10" Padding="20" Margin="0,0,0,14">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="Twitch" Foreground="{DynamicResource TextPrimaryBrush}"
+                                           FontWeight="SemiBold" FontSize="15"/>
+                                <TextBlock x:Name="TwitchStatusText" Text="Disconnected"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           FontSize="12" Margin="0,4,0,0"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Login Twitch" Click="OnTwitchLoginClick"
+                                    Style="{StaticResource Button.Primary}"/>
+                        </Grid>
+                    </Border>
+
+                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            CornerRadius="10" Padding="20">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="Kick" Foreground="{DynamicResource TextPrimaryBrush}"
+                                           FontWeight="SemiBold" FontSize="15"/>
+                                <TextBlock x:Name="KickStatusText" Text="Disconnected"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           FontSize="12" Margin="0,4,0,0"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Login Kick" Click="OnKickLoginClick"
+                                    Style="{StaticResource Button.Primary}"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- STEP 3: Mining behavior -->
+                <StackPanel x:Name="Step3Panel" Grid.Row="1" Visibility="Collapsed">
+                    <TextBlock Text="Mining behavior"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               FontSize="20" FontWeight="Bold"
+                               TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="0,0,0,10"/>
+                    <TextBlock Text="All of this can be changed anytime in Settings."
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="13" TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="0,0,0,24"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
+                        <TextBlock Text="Mining priority" Foreground="{DynamicResource TextMutedBrush}"
+                                   VerticalAlignment="Center" Width="120"/>
+                        <ComboBox Width="220"
+                                  Style="{StaticResource OnboardingComboBoxStyle}"
+                                  SelectedValue="{Binding MiningPriorityMode, Mode=TwoWay}"
+                                  SelectedValuePath="Tag">
+                            <ComboBoxItem Content="Ending Soonest" Tag="{x:Static enums:MiningPriorityMode.EndingSoonest}"/>
+                            <ComboBoxItem Content="Live Now First" Tag="{x:Static enums:MiningPriorityMode.LiveNowFirst}"/>
+                            <ComboBoxItem Content="Highest Completion of Drop" Tag="{x:Static enums:MiningPriorityMode.HighestCompletionOfDrop}"/>
+                            <ComboBoxItem Content="Least Time To Next Reward" Tag="{x:Static enums:MiningPriorityMode.LeastTimeToNextReward}"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <CheckBox IsChecked="{Binding StartWithWindows, Mode=TwoWay}"
+                              Style="{StaticResource Check}"
+                              Content="Start with Windows"
+                              HorizontalAlignment="Center"
+                              Margin="0,0,0,16"/>
+
+                    <CheckBox IsChecked="{Binding MinimizeToTrayOnStartup, Mode=TwoWay}"
+                              IsEnabled="{Binding StartWithWindows}"
+                              Style="{StaticResource Check}"
+                              Content="Start minimized to tray"
+                              HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- STEP 4: Notifications & updates -->
+                <StackPanel x:Name="Step4Panel" Grid.Row="1" Visibility="Collapsed">
+                    <TextBlock Text="Notifications &amp; updates"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               FontSize="20" FontWeight="Bold"
+                               TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="0,0,0,10"/>
+                    <TextBlock Text="All of this can be changed anytime in Settings."
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="13" TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="0,0,0,24"/>
+
+                    <CheckBox IsChecked="{Binding NotifyOnDropStarted, Mode=TwoWay}"
+                              Style="{StaticResource Check}"
+                              Content="Enable Drop Notifications"
+                              HorizontalAlignment="Center"
+                              Margin="0,0,0,16"/>
+
+                    <CheckBox IsChecked="{Binding NotifyOnAutoClaimed, Mode=TwoWay}"
+                              IsEnabled="{Binding NotifyOnDropStarted}"
+                              Style="{StaticResource Check}"
+                              Content="Notify me when a reward has been claimed"
+                              HorizontalAlignment="Center"
+                              Margin="0,0,0,24"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="Check for updates" Foreground="{DynamicResource TextMutedBrush}"
+                                   VerticalAlignment="Center" Width="120"/>
+                        <ComboBox Width="220"
+                                  Style="{StaticResource OnboardingComboBoxStyle}"
+                                  SelectedValue="{Binding UpdateFrequency, Mode=TwoWay}"
+                                  SelectedValuePath="Tag">
+                            <ComboBoxItem Content="Every time the app starts" Tag="{x:Static enums:UpdateFrequency.OnLaunch}"/>
+                            <ComboBoxItem Content="Daily" Tag="{x:Static enums:UpdateFrequency.Daily}"/>
+                            <ComboBoxItem Content="Weekly" Tag="{x:Static enums:UpdateFrequency.Weekly}"/>
+                            <ComboBoxItem Content="Never" Tag="{x:Static enums:UpdateFrequency.Never}"/>
+                        </ComboBox>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
+            <!-- Footer -->
+            <Grid Grid.Row="2" Margin="32,18,32,24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Button Grid.Row="0" x:Name="SkipButton"
+                        Content="Skip this and launch Stream Drop Collector"
+                        Style="{StaticResource LinkButtonStyle}"
+                        Margin="0,0,0,14"
+                        Click="OnSkipClick"/>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="BackButton" Content="Back"
+                            Style="{StaticResource Button.Ghost}"
+                            Margin="0,0,10,0"
+                            Click="OnBackClick"/>
+                    <Button x:Name="NextButton" Content="Next"
+                            Style="{StaticResource Button.Primary}"
+                            Click="OnNextClick"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

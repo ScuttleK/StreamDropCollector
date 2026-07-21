@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:enums="clr-namespace:Core.Enums;assembly=Core"
+             xmlns:behaviors="clr-namespace:UI.Behaviors"
              mc:Ignorable="d"
              d:DesignHeight="900" d:DesignWidth="800"
              Background="{DynamicResource MainBackgroundBrush}">
@@ -552,7 +553,8 @@
                             <ListBox ItemsSource="{Binding TwitchGameFilterOptions}"
                                      BorderThickness="0"
                                      Background="Transparent"
-                                     MaxHeight="140">
+                                     MaxHeight="140"
+                                     behaviors:ScrollBubbling.PassThrough="True">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <CheckBox Content="{Binding DisplayName}"
@@ -584,7 +586,8 @@
                             <ListBox ItemsSource="{Binding KickGameFilterOptions}"
                                      BorderThickness="0"
                                      Background="Transparent"
-                                     MaxHeight="140">
+                                     MaxHeight="140"
+                                     behaviors:ScrollBubbling.PassThrough="True">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <CheckBox Content="{Binding DisplayName}"
@@ -653,7 +656,8 @@
                                          BorderThickness="0"
                                          Background="Transparent"
                                          HorizontalContentAlignment="Stretch"
-                                         MaxHeight="260">
+                                         MaxHeight="260"
+                                         behaviors:ScrollBubbling.PassThrough="True">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
                                             <Grid Margin="4,4,4,4" HorizontalAlignment="Stretch">
@@ -745,6 +749,10 @@
                                   Content="New update is available"
                                   Margin="0,0,0,12"
                                   IsEnabled="{Binding IsUpdateNotificationEnabled}"/>
+
+                        <CheckBox IsChecked="{Binding NotifyOnDropStarted, Mode=TwoWay}"
+                                  Style="{StaticResource ModernCheckBoxStyle}"
+                                  Content="A drop has started being farmed"/>
                     </StackPanel>
                 </Border>
 

@@ -28,6 +28,15 @@ jobs:
                   Remove-Item -Recurse -Force publish/framework-dependent/ -ErrorAction SilentlyContinue
                   dotnet publish UI/UI.csproj -c Release -r win-x64 -p:SelfContained=false -o publish/framework-dependent/
 
+            - name: Build Installer (Inno Setup)
+              shell: pwsh
+              run: |
+                  choco install innosetup -y --no-progress
+                  $version = "${{ github.ref_name }}" -replace '^v', ''
+                  & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "Installer\StreamDropCollector.iss" "/DMyAppVersion=$version"
+                  Copy-Item "publish\installer\StreamDropCollectorSetup-$version.exe" "StreamDropCollector-${{ github.ref_name }}-setup.exe"
+                  Copy-Item "publish\installer\StreamDropCollectorSetup-$version.exe" "StreamDropCollector-latest-setup.exe"
+
             - name: Zip (Self-Contained)
               run: Compress-Archive -Path publish/self-contained/* -DestinationPath StreamDropCollector-${{ github.ref_name }}-self-contained.zip
 
@@ -78,11 +87,12 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   $notes = @"
-                  Self-contained build (no .NET install needed) and a framework-dependent build (requires the .NET 10 runtime) are both attached below.
+                  An installer (recommended) and portable self-contained/framework-dependent builds are all attached below.
 
                   **Permanent download links** (always point at the newest release, no version number needed):
-                  - [Self-contained (recommended)](https://github.com/Scuttle-ZapAccess/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-self-contained.zip)
-                  - [Framework-dependent](https://github.com/Scuttle-ZapAccess/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-framework-dependent.zip)
+                  - [Installer (recommended)](https://github.com/Scuttle-ZapAccess/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-setup.exe)
+                  - [Self-contained portable](https://github.com/Scuttle-ZapAccess/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-self-contained.zip)
+                  - [Framework-dependent portable](https://github.com/Scuttle-ZapAccess/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-framework-dependent.zip)
 
                   [Installation guide](https://github.com/Scuttle-ZapAccess/StreamDropCollector?tab=readme-ov-file#quick-start)
 
@@ -91,8 +101,10 @@ jobs:
                   **Full Changelog**: https://github.com/Scuttle-ZapAccess/StreamDropCollector/compare/${{ steps.prev_tag.outputs.tag }}...${{ github.ref_name }}
                   "@
                   gh release create "${{ github.ref_name }}" `
+                    "StreamDropCollector-${{ github.ref_name }}-setup.exe" `
                     "StreamDropCollector-${{ github.ref_name }}-self-contained.zip" `
                     "StreamDropCollector-${{ github.ref_name }}-framework-dependent.zip" `
+                    "StreamDropCollector-latest-setup.exe" `
                     "StreamDropCollector-latest-self-contained.zip" `
                     "StreamDropCollector-latest-framework-dependent.zip" `
                     --title "StreamDropCollector ${{ github.ref_name }}" `

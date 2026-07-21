@@ -46,6 +46,23 @@ namespace Core.Interfaces
         /// <param name="ct">Cancellation token.</param>
         /// <returns>Ordered list of channel login names that are live and streaming the correct game.</returns>
         Task<List<string>> QueryLiveChannelsBySlugAsync(IReadOnlyList<string> channelLogins, string gameSlug, CancellationToken ct = default);
+        /// <summary>
+        /// Checks whether a single channel is currently live, with no game-category filter (unlike
+        /// <see cref="QueryLiveChannelsBySlugAsync"/>, which requires a matching game slug).
+        /// </summary>
+        /// <param name="channelLogin">The channel login name to check.</param>
+        /// <param name="ct">Cancellation token.</param>
+        /// <returns>True if the channel's stream is currently live.</returns>
+        Task<bool> IsChannelLiveAsync(string channelLogin, CancellationToken ct = default);
+        /// <summary>
+        /// Claims a pending community points bonus (e.g. Watch Streak) for a channel.
+        /// </summary>
+        /// <param name="channelId">The numeric channel/user ID the claim belongs to.</param>
+        /// <param name="claimId">The claim ID, as surfaced by a ChannelPointsContext query/response's
+        /// community.channel.self.communityPoints.availableClaim.id field.</param>
+        /// <param name="ct">Cancellation token.</param>
+        /// <returns>The number of points earned if the claim succeeded; otherwise null.</returns>
+        Task<int?> ClaimCommunityPointsAsync(string channelId, string claimId, CancellationToken ct = default);
         string UserId { set; }
     }
 }

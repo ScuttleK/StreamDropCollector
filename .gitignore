@@ -6,6 +6,7 @@ CLAUDE.md
 # Default Visual Studio stuff
 [Bb]in/
 [Oo]bj/
+publish/
 *.suo
 *.user
 *.userosscache

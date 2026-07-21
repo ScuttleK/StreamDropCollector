@@ -44,6 +44,7 @@ namespace Core.Managers
         private string? _lastTwitchDropId; // id of the last reward reported via TwitchDropChanged
         private string? _lastKickDropId;   // id of the last reward reported via KickDropChanged
         private DropsCampaign? _currentKickCampaign;
+        private string? _currentKickStreamerUrl; // URL of the Kick streamer currently being watched
         private IGqlService? _twitchGqlService;
 
         // Pinned campaign to watch regardless of priority order, tracked per platform so pinning one
@@ -924,9 +925,16 @@ namespace Core.Managers
                             continue;
                         }
 
+                        string? previousTwitchLogin = _currentTwitchLogin;
                         _currentTwitchLogin = twitchLogin;
                         _lastKnownTwitchOnlineState = true;
                         UpdateCurrentSelectionFlags();
+
+                        if (UISettingsManager.Instance.NotifyOnDropStarted &&
+                            !string.Equals(previousTwitchLogin, twitchLogin, StringComparison.OrdinalIgnoreCase))
+                        {
+                            NotificationManager.ShowNotification("Drop Farming Started", $"Now watching '{twitchLogin}' for campaign '{bestTwitch.Name}'.");
+                        }
 
                         // Sync baseline NOW - right after selection, before any further logic
                         DropsReward? nextTwitchReward = bestTwitch.Rewards
@@ -1035,14 +1043,23 @@ namespace Core.Managers
                         {
                             AppLogger.Warn("KickSelection", $"Kick campaign '{bestKick.Name}' failed streamer eligibility. online={kickOnline}, categoryOk={kickCorrectCategory}");
                             _currentKickCampaign = null;
+                            _currentKickStreamerUrl = null;
                             UpdateCurrentSelectionFlags();
                             skippedOffline.Add(bestKick.Id);
                             remainingKickCampaigns.Remove(bestKick);
                             continue;
                         }
 
+                        string? previousKickStreamerUrl = _currentKickStreamerUrl;
+                        _currentKickStreamerUrl = kickUrl;
                         _lastKnownKickOnlineState = true;
                         UpdateCurrentSelectionFlags();
+
+                        if (UISettingsManager.Instance.NotifyOnDropStarted &&
+                            !string.Equals(previousKickStreamerUrl, kickUrl, StringComparison.OrdinalIgnoreCase))
+                        {
+                            NotificationManager.ShowNotification("Drop Farming Started", $"Now watching '{kickUrl}' for campaign '{bestKick.Name}'.");
+                        }
 
                         DropsReward? nextKickReward = bestKick.Rewards
                             .Where(r => !r.IsClaimed)

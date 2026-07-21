@@ -747,6 +747,66 @@ namespace UI.Views
             throw new TimeoutException($"Failed to capture GQL payload containing '{triggerText}' after {maxRetries} attempts", lastException);
         }
         /// <summary>
+        /// Passively listens for a GraphQL response whose body contains the specified trigger text, without
+        /// triggering any navigation itself -- the caller is expected to already be on a page where the relevant
+        /// GraphQL traffic happens naturally (e.g. a live channel page polling for channel points state), unlike
+        /// <see cref="CaptureGqlRequestBodyContainingAsyncWithRetry"/> which forces its own navigation per attempt.
+        /// </summary>
+        public async Task<string?> CaptureGqlResponseBodyContainingAsync(string triggerText, int timeoutMs, CancellationToken ct = default)
+        {
+            TaskCompletionSource<string> tcs = new TaskCompletionSource<string>();
+
+            await WebView.CoreWebView2.CallDevToolsProtocolMethodAsync("Network.enable", "{}");
+
+            CoreWebView2DevToolsProtocolEventReceiver responseReceived = WebView.CoreWebView2.GetDevToolsProtocolEventReceiver("Network.responseReceived");
+
+            async void Handler(object? s, CoreWebView2DevToolsProtocolEventReceivedEventArgs e)
+            {
+                try
+                {
+                    JsonElement payload = JsonDocument.Parse(e.ParameterObjectAsJson).RootElement;
+                    string url = payload.GetProperty("response").GetProperty("url").GetString() ?? "";
+                    string? requestId = payload.GetProperty("requestId").GetString();
+
+                    if (url == "https://gql.twitch.tv/gql" && requestId != null)
+                    {
+                        JsonElement headers = payload.GetProperty("response").GetProperty("headers");
+                        if (headers.TryGetProperty("content-type", out JsonElement ctHeader) &&
+                            ctHeader.GetString()?.Contains("application/json") == true)
+                        {
+                            string bodyResult = await WebView.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                                "Network.getResponseBody",
+                                JsonSerializer.Serialize(new { requestId }));
+
+                            JsonElement bodyJson = JsonDocument.Parse(bodyResult).RootElement;
+                            string body = bodyJson.GetProperty("body").GetString() ?? "";
+
+                            if (body.Contains(triggerText))
+                            {
+                                Dispatcher.Invoke(() =>
+                                {
+                                    responseReceived.DevToolsProtocolEventReceived -= Handler;
+                                });
+
+                                tcs.TrySetResult(body);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("WebViewCapture", $"{triggerText} response handler parse failure: {ex.Message}");
+                }
+            }
+
+            responseReceived.DevToolsProtocolEventReceived += Handler;
+
+            Task result = await Task.WhenAny(tcs.Task, Task.Delay(timeoutMs, ct));
+            responseReceived.DevToolsProtocolEventReceived -= Handler;
+
+            return result == tcs.Task ? await tcs.Task : null;
+        }
+        /// <summary>
         /// Attempts to claim a reward drop for a specified campaign on Kick.com using the current session.
         /// </summary>
         /// <remarks>This method requires a valid Kick.com session token to be present in the browser's
