@@ -19,5 +19,5 @@
       "changelog": "Initial release."
     }
   ],
-  "sha256": "9b73aab4653bc8ffe1c6a6334b465a53062ba44fa5fb24a0e505110d5e61e626"
+  "sha256": "670977b727f24a3f286cd2165f79475e674cf7fa11644ee13bbedc5567b1dd5b"
 }
