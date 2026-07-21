@@ -39,6 +39,11 @@ _Active campaigns and rewards overview_
 
 ---
 
+![Watch Streak](https://github.com/Scuttle-ZapAccess/StreamDropCollector/blob/master/Github-Assets/WatchStreak.png?raw=true)  
+_Queue specific channels to auto-claim their Watch Streak bonus once live_
+
+---
+
 ## Requirements
 
 - Windows 10/11 (64-bit)
