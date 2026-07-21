@@ -86,7 +86,15 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
+                  # updateInfo.sdc's "changelog" field is the maintainer-written description of this
+                  # release - surface it in the GitHub release body too, not just the in-app updater.
+                  $changelog = (Get-Content updateInfo.sdc -Raw | ConvertFrom-Json).changelog
+
                   $notes = @"
+                  ## What's new
+
+                  $changelog
+
                   An installer (recommended) and portable self-contained/framework-dependent builds are all attached below.
 
                   **Permanent download links** (always point at the newest release, no version number needed):
