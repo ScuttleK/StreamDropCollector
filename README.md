@@ -7,7 +7,7 @@ This is a personalized, actively-maintained fork of [tsgsOFFICIAL/StreamDropColl
 
 [![.NET](https://img.shields.io/badge/.NET-10.0-blueviolet)](https://dotnet.microsoft.com/download)
 [![WPF](https://img.shields.io/badge/WPF-Modern_UI-teal)](https://learn.microsoft.com/en-us/dotnet/desktop/wpf/overview)
-[![GitHub license](https://img.shields.io/github/license/Scuttle-ZapAccess/StreamDropCollector)](https://github.com/Scuttle-ZapAccess/StreamDropCollector/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/Scuttle-ZapAccess/StreamDropCollector/blob/master/LICENSE)
 
 ## Features
 
