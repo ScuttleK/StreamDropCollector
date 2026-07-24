@@ -1,14 +1,22 @@
 {
-  "version": "1.0.3",
-  "type": "Feature",
+  "version": "1.0.4",
+  "type": "Fix",
   "changelog": [
-    "Added Watch Streak: a dedicated sidebar page that watches a queued list of specific channels and automatically claims the community-points bonus once each goes live, independent of any drop campaign",
-    "Added a proper Windows installer (built with Inno Setup) with a real Welcome / destination / install / finish wizard, Start Menu and optional Desktop shortcuts, and a clean Apps & Features uninstall entry; installs per-user and refuses to install or uninstall while the app is still running",
-    "Added a first-run \"Quick Setup\" window shown once after installing — pick a theme, log in to Twitch/Kick with live Connected/Failed status, set mining priority and startup behavior, and choose notification and update-check preferences",
-    "Added optional notifications for when a reward has been claimed and for when the app starts actively farming a new stream",
-    "Added a \"Browser Extension (Optional)\" card to the Help page"
+    "Fixed Watch Streak not checking any queued streamer's live status until the Watch Streak page had been opened at least once — it now starts polling immediately at launch",
+    "Fixed campaign and Kick expiry countdowns showing \"0d left\" for a campaign that actually ends the next calendar day, when less than 24 hours remained before its end time"
   ],
   "historic_versions": [
+    {
+      "version": "1.0.3",
+      "type": "Feature",
+      "changelog": [
+        "Added Watch Streak: a dedicated sidebar page that watches a queued list of specific channels and automatically claims the community-points bonus once each goes live, independent of any drop campaign",
+        "Added a proper Windows installer (built with Inno Setup) with a real Welcome / destination / install / finish wizard, Start Menu and optional Desktop shortcuts, and a clean Apps & Features uninstall entry; installs per-user and refuses to install or uninstall while the app is still running",
+        "Added a first-run \"Quick Setup\" window shown once after installing — pick a theme, log in to Twitch/Kick with live Connected/Failed status, set mining priority and startup behavior, and choose notification and update-check preferences",
+        "Added optional notifications for when a reward has been claimed and for when the app starts actively farming a new stream",
+        "Added a \"Browser Extension (Optional)\" card to the Help page"
+      ]
+    },
     {
       "version": "1.0.2",
       "type": "Feature",

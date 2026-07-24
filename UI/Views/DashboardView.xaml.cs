@@ -317,7 +317,7 @@ namespace UI.Views
             endsAt.HasValue ? (endsAt.Value - DateTimeOffset.UtcNow).TotalDays : double.MaxValue;
         private static string FormatExpiryText(DateTimeOffset endsAt)
         {
-            int days = (int)Math.Max(0, (endsAt - DateTimeOffset.UtcNow).TotalDays);
+            int days = (int)Math.Max(0, (endsAt.LocalDateTime.Date - DateTime.Now.Date).TotalDays);
             return $"Ends {endsAt.LocalDateTime:MMM d} · {days}d left";
         }
 
@@ -1234,7 +1234,7 @@ namespace UI.Views
         {
             get
             {
-                int d = (int)Math.Max(0, (Campaign.EndsAt - DateTimeOffset.UtcNow).TotalDays);
+                int d = (int)Math.Max(0, (Campaign.EndsAt.LocalDateTime.Date - DateTime.Now.Date).TotalDays);
                 return $"Ends {Campaign.EndsAt.LocalDateTime:MMM d} · {d}d left";
             }
         }
