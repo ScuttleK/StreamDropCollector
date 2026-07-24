@@ -106,6 +106,13 @@ namespace UI
 
             // Default page
             SwitchPage(DashboardView.Instance);
+
+            // Watch Streak polls on a DispatcherTimer owned by WatchStreakManager, but that
+            // manager can't check anyone until it has a WebView host -- which only gets wired up
+            // from WatchStreakView's constructor. Touch the (lazy singleton) instance now so
+            // availability checks start immediately at launch instead of waiting for the user to
+            // open the Watch Streak page for the first time.
+            _ = WatchStreakView.Instance;
         }
 
         private void OnMainWindowLoaded(object sender, RoutedEventArgs e)
