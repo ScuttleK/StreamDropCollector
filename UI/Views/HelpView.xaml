@@ -16,6 +16,10 @@
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Foreground" Value="{DynamicResource AccentHoverBrush}"/>
                 </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                    <Setter Property="Cursor" Value="Arrow"/>
+                </Trigger>
             </Style.Triggers>
         </Style>
 
@@ -115,8 +119,11 @@
                         </TextBlock>
                         <TextBlock FontSize="16">
                             <Hyperlink Style="{StaticResource NeonHyperlink}"
+                                       IsEnabled="False"
                                        NavigateUri="https://github.com/ScuttleK/automatic-twitch-ext-fork/releases/latest"
-                                       RequestNavigate="Hyperlink_RequestNavigate">
+                                       RequestNavigate="Hyperlink_RequestNavigate"
+                                       ToolTip="Not ready yet - still in progress"
+                                       ToolTipService.ShowOnDisabled="True">
                                 Download the Browser Extension &#8594;
                             </Hyperlink>
                         </TextBlock>
