@@ -92,6 +92,8 @@ jobs:
 
                   [Installation guide](https://github.com/ScuttleK/StreamDropCollector?tab=readme-ov-file#quick-start)
 
+                  **About the Windows SmartScreen warning:** this is free, unsigned open-source software, so Windows will likely show a "Windows protected your PC / Unknown publisher" warning the first time you run it - this is standard for small/indie software, not a sign of anything malicious. Click More info -> Run anyway. Source is public here if you want to verify it yourself.
+
                   Create an issue on GitHub with any feedback or bugs.
 
                   ### Changelog

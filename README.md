@@ -60,6 +60,10 @@ The easiest way to get started is the installer:
 
 Prefer a portable copy instead? Grab the [self-contained](https://github.com/ScuttleK/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-self-contained.zip) (no .NET install needed) or [framework-dependent](https://github.com/ScuttleK/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-framework-dependent.zip) (requires the .NET 10 runtime) zip from the same [Releases](https://github.com/ScuttleK/StreamDropCollector/releases) page and run `Stream Drop Collector.exe` directly - no installation step.
 
+### About the Windows SmartScreen warning
+
+This is free, unsigned open-source software (no paid code-signing certificate), so Windows will likely show a **"Windows protected your PC" / Unknown publisher** warning the first time you run the installer or the app itself. This is standard for small/indie/open-source Windows software, not a sign of anything malicious - click **More info → Run anyway**. The full source is public in this repo if you'd like to verify what's actually in it yourself.
+
 ## Building from Source
 
 ```bash
