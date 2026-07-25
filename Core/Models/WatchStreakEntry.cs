@@ -81,8 +81,13 @@ namespace Core.Models
                 _lastClaimedAtUtc = value;
                 OnPropertyChanged(nameof(LastClaimedAtUtc));
                 OnPropertyChanged(nameof(HasCompletedBefore));
-                OnPropertyChanged(nameof(LastCompletedText));
+                OnPropertyChanged(nameof(LastCompletedHeadlineText));
+                OnPropertyChanged(nameof(LastCompletedDetailText));
                 OnPropertyChanged(nameof(IsLastCompletedToday));
+                OnPropertyChanged(nameof(CompletedTodayStatusText));
+                OnPropertyChanged(nameof(IsConfirmedOnline));
+                OnPropertyChanged(nameof(IsConfirmedOffline));
+                OnPropertyChanged(nameof(PrimaryStatusText));
             }
         }
 
@@ -94,7 +99,7 @@ namespace Core.Models
             {
                 _lastPointsEarned = value;
                 OnPropertyChanged(nameof(LastPointsEarned));
-                OnPropertyChanged(nameof(LastCompletedText));
+                OnPropertyChanged(nameof(LastCompletedDetailText));
             }
         }
 
@@ -106,18 +111,21 @@ namespace Core.Models
 
         /// <summary>
         /// True once we've checked at least once and confirmed the channel is not live (and it isn't
-        /// currently being watched/erroring) -- drives the red "Offline" indicator in the UI.
+        /// currently being watched/erroring) -- drives the red "Offline" indicator in the UI. Once
+        /// today's Watch Streak is already completed the dedicated green "Completed" indicator takes
+        /// over instead (see <see cref="IsLastCompletedToday"/>), since we stop checking live status.
         /// </summary>
         public bool IsConfirmedOffline =>
-            LastCheckedAtUtc.HasValue && !IsCurrentlyLive && Status != WatchStreakStatus.Watching && Status != WatchStreakStatus.Error && !IsCheckingNow;
+            LastCheckedAtUtc.HasValue && !IsCurrentlyLive && Status != WatchStreakStatus.Watching && Status != WatchStreakStatus.Error && !IsCheckingNow && !IsLastCompletedToday;
 
         /// <summary>
         /// True when the channel is confirmed live but isn't (or is no longer) being actively watched --
-        /// i.e. it already completed its Watch Streak for today/this session, so re-watching is skipped.
-        /// Drives the green "Online" indicator in the UI, parallel to <see cref="IsConfirmedOffline"/>.
+        /// i.e. it already completed its Watch Streak for this session (but not yet "today", e.g. a
+        /// stream restart within the same still-live session). Drives the green "Online" indicator in
+        /// the UI, parallel to <see cref="IsConfirmedOffline"/>.
         /// </summary>
         public bool IsConfirmedOnline =>
-            LastCheckedAtUtc.HasValue && IsCurrentlyLive && Status != WatchStreakStatus.Watching && Status != WatchStreakStatus.Error && !IsCheckingNow;
+            LastCheckedAtUtc.HasValue && IsCurrentlyLive && Status != WatchStreakStatus.Watching && Status != WatchStreakStatus.Error && !IsCheckingNow && !IsLastCompletedToday;
 
         public string OfflineLastCheckedText =>
             LastCheckedAtUtc.HasValue ? $"Last checked: {LastCheckedAtUtc.Value.ToLocalTime():g}" : "";
@@ -144,7 +152,8 @@ namespace Core.Models
 
         /// <summary>
         /// The main status line for everything except "confirmed offline"/"confirmed online"/"checking
-        /// now", which have their own dedicated colored indicators instead of sharing this text.
+        /// now"/"completed today", which have their own dedicated colored indicators instead of sharing
+        /// this text.
         /// </summary>
         public string PrimaryStatusText
         {
@@ -156,6 +165,9 @@ namespace Core.Models
                     return LastError ?? "Error";
                 if (IsCheckingNow)
                     return ""; // shown via the dedicated "Checking..." indicator instead
+                if (IsLastCompletedToday)
+                    return ""; // shown via the dedicated "Completed" indicator instead -- live checks
+                               // are skipped entirely today, so LastCheckedAtUtc never gets set
                 if (!LastCheckedAtUtc.HasValue)
                     return "Waiting for first status check...";
 
@@ -167,7 +179,29 @@ namespace Core.Models
 
         public bool HasCompletedBefore => LastClaimedAtUtc.HasValue;
 
-        public string LastCompletedText
+        /// <summary>
+        /// Bold headline for the "last completed" line -- distinct wording for "completed today" (the
+        /// common case, since checks stop for the rest of the day once this is true) versus an older,
+        /// historical completion still on display before the next successful check refreshes it.
+        /// </summary>
+        public string LastCompletedHeadlineText
+        {
+            get
+            {
+                if (!LastClaimedAtUtc.HasValue)
+                    return "";
+
+                return IsLastCompletedToday
+                    ? "Watch Streak has been completed today"
+                    : "Streamer Watch Streak Completed";
+            }
+        }
+
+        /// <summary>
+        /// Small muted detail line under <see cref="LastCompletedHeadlineText"/> -- the actual moment
+        /// the watch finished (not when it started watching) plus whether a bonus was earned.
+        /// </summary>
+        public string LastCompletedDetailText
         {
             get
             {
@@ -176,13 +210,22 @@ namespace Core.Models
 
                 string when = LastClaimedAtUtc.Value.ToLocalTime().ToString("g");
                 return LastPointsEarned.HasValue
-                    ? $"Streamer Watch Streak Completed - {when} (+{LastPointsEarned} pts)"
-                    : $"Streamer Watch Streak Completed - {when} (no bonus that time)";
+                    ? $"{when} (+{LastPointsEarned} pts)"
+                    : $"{when} (no bonus that time)";
             }
         }
 
         public bool IsLastCompletedToday =>
             LastClaimedAtUtc.HasValue && LastClaimedAtUtc.Value.ToLocalTime().Date == DateTime.Now.Date;
+
+        /// <summary>
+        /// Drives the muted text next to the green "Completed" indicator that replaces the normal
+        /// Online/Offline "Last checked" line once today's Watch Streak is done.
+        /// </summary>
+        public string CompletedTodayStatusText =>
+            IsLastCompletedToday && LastClaimedAtUtc.HasValue
+                ? $"Watch Streak Completed today at {LastClaimedAtUtc.Value.ToLocalTime():g}"
+                : "";
 
         public WatchStreakEntry(string channelLogin)
         {

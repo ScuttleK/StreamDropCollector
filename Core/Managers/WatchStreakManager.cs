@@ -173,6 +173,13 @@ namespace Core.Managers
                 if (candidate.Status == WatchStreakStatus.Watching)
                     continue;
 
+                // Already completed today's Watch Streak -- skip the live check entirely (no network
+                // call, no "Checking..." flicker) to save resources. Flips back to eligible on its own
+                // once IsLastCompletedToday rolls over past local midnight. Also covers a manual
+                // "Refresh Now" click, since that just forces this same poll to run sooner.
+                if (candidate.IsLastCompletedToday)
+                    continue;
+
                 bool isLive;
                 candidate.IsCheckingNow = true;
                 try
@@ -319,6 +326,15 @@ namespace Core.Managers
             // Give ListenForClaimAsync (running with its own slightly-longer timeout) a moment to
             // land if a claim arrived right at the edge of the window.
             await Task.Delay(2000);
+
+            // If no bonus claim landed this session, the watch still counts as completed -- record it
+            // now, using the actual finish time (not the earlier watch-start time), so today's Watch
+            // Streak is correctly marked done and isn't immediately re-watched on the next poll.
+            if (entry.LastClaimedSessionId != entry.CurrentSessionId)
+            {
+                entry.LastPointsEarned = null;
+                entry.LastClaimedAtUtc = DateTimeOffset.UtcNow;
+            }
 
             entry.Status = WatchStreakStatus.Idle;
             SaveQueueToDisk();

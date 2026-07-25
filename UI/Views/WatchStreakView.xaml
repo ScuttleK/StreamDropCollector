@@ -268,22 +268,43 @@
                                                        FontSize="13"/>
                                         </StackPanel>
 
+                                        <!-- Today's Watch Streak is already done: replaces the
+                                             Online/Offline row and stops further live checks until
+                                             local midnight rolls the date over. -->
+                                        <StackPanel Orientation="Horizontal"
+                                                    Margin="0,4,0,0"
+                                                    Visibility="{Binding IsLastCompletedToday, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="Completed"
+                                                       Foreground="{DynamicResource SuccessBrush}"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="13"/>
+                                            <TextBlock Text="{Binding CompletedTodayStatusText, StringFormat=' - {0}'}"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       FontSize="13"/>
+                                        </StackPanel>
+
                                         <!-- Last time the Watch Streak bonus was actually completed -->
-                                        <TextBlock Text="{Binding LastCompletedText}"
-                                                   FontSize="13"
-                                                   Margin="0,4,0,0"
-                                                   Visibility="{Binding HasCompletedBefore, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="Gold"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsLastCompletedToday}" Value="True">
-                                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
+                                        <StackPanel Margin="0,4,0,0"
+                                                    Visibility="{Binding HasCompletedBefore, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="{Binding LastCompletedHeadlineText}"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="13">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="Gold"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsLastCompletedToday}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding LastCompletedDetailText}"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       FontSize="11"
+                                                       Margin="0,2,0,0"/>
+                                        </StackPanel>
                                     </StackPanel>
 
                                     <Button Grid.Column="1"

@@ -1,11 +1,21 @@
 {
-  "version": "1.0.4",
+  "version": "1.0.5",
   "type": "Fix",
   "changelog": [
-    "Fixed Watch Streak not checking any queued streamer's live status until the Watch Streak page had been opened at least once — it now starts polling immediately at launch",
-    "Fixed campaign and Kick expiry countdowns showing \"0d left\" for a campaign that actually ends the next calendar day, when less than 24 hours remained before its end time"
+    "Fixed Watch Streak's completed line to clearly say \"Watch Streak has been completed today\" in green, instead of the harder-to-parse \"Streamer Watch Streak Completed\"",
+    "Fixed the completed timestamp showing a stale, incorrect date instead of the actual time the 5-minute watch finished",
+    "Fixed a bug where a Watch Streak that finished without a bonus becoming available was never actually recorded as completed, which could cause the same streamer to be needlessly re-watched over and over on the same day",
+    "Watch Streak now shows a dedicated green \"Completed\" status once today's watch is done, and skips further online/offline checks for that streamer (including a manual \"Refresh Now\") to save resources until it resets after local midnight"
   ],
   "historic_versions": [
+    {
+      "version": "1.0.4",
+      "type": "Fix",
+      "changelog": [
+        "Fixed Watch Streak not checking any queued streamer's live status until the Watch Streak page had been opened at least once — it now starts polling immediately at launch",
+        "Fixed campaign and Kick expiry countdowns showing \"0d left\" for a campaign that actually ends the next calendar day, when less than 24 hours remained before its end time"
+      ]
+    },
     {
       "version": "1.0.3",
       "type": "Feature",

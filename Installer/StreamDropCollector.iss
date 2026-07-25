@@ -6,7 +6,7 @@
 ;
 ; CI overrides the version via /DMyAppVersion=x.y.z (see .github/workflows/release.yml).
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.4"
+  #define MyAppVersion "1.0.5"
 #endif
 
 #define MyAppName "Stream Drop Collector"
