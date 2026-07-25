@@ -10,8 +10,8 @@
 #endif
 
 #define MyAppName "Stream Drop Collector"
-#define MyAppPublisher "Scuttle"
-#define MyAppURL "https://github.com/Scuttle-ZapAccess/StreamDropCollector"
+#define MyAppPublisher "ScuttleK"
+#define MyAppURL "https://github.com/ScuttleK/StreamDropCollector"
 #define MyAppExeName "Stream Drop Collector.exe"
 #define MyPublishDir "..\publish\self-contained"
 

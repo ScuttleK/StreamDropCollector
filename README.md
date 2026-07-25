@@ -7,7 +7,7 @@ This is a personalized, actively-maintained fork of [tsgsOFFICIAL/StreamDropColl
 
 [![.NET](https://img.shields.io/badge/.NET-10.0-blueviolet)](https://dotnet.microsoft.com/download)
 [![WPF](https://img.shields.io/badge/WPF-Modern_UI-teal)](https://learn.microsoft.com/en-us/dotnet/desktop/wpf/overview)
-[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/Scuttle-ZapAccess/StreamDropCollector/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/ScuttleK/StreamDropCollector/blob/master/LICENSE)
 
 ## Features
 
@@ -29,17 +29,17 @@ This is a personalized, actively-maintained fork of [tsgsOFFICIAL/StreamDropColl
 
 ## Screenshots
 
-![Dashboard](https://github.com/Scuttle-ZapAccess/StreamDropCollector/blob/master/Github-Assets/Dashboard.png?raw=true)  
+![Dashboard](https://github.com/ScuttleK/StreamDropCollector/blob/master/Github-Assets/Dashboard.png?raw=true)  
 _Main dashboard showing live progress for both platforms_
 
 ---
 
-![Inventory](https://github.com/Scuttle-ZapAccess/StreamDropCollector/blob/master/Github-Assets/Inventory.png?raw=true)  
+![Inventory](https://github.com/ScuttleK/StreamDropCollector/blob/master/Github-Assets/Inventory.png?raw=true)  
 _Active campaigns and rewards overview_
 
 ---
 
-![Watch Streak](https://github.com/Scuttle-ZapAccess/StreamDropCollector/blob/master/Github-Assets/WatchStreak.png?raw=true)  
+![Watch Streak](https://github.com/ScuttleK/StreamDropCollector/blob/master/Github-Assets/WatchStreak.png?raw=true)  
 _Queue specific channels to auto-claim their Watch Streak bonus once live_
 
 ---
@@ -53,17 +53,17 @@ _Queue specific channels to auto-claim their Watch Streak bonus once live_
 
 The easiest way to get started is the installer:
 
-1. Download [the latest installer](https://github.com/Scuttle-ZapAccess/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-setup.exe)
+1. Download [the latest installer](https://github.com/ScuttleK/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-setup.exe)
 2. Run it and follow the setup wizard
 3. Log in to Twitch and/or Kick when prompted during first-run Quick Setup
 4. Enjoy the free drops!
 
-Prefer a portable copy instead? Grab the [self-contained](https://github.com/Scuttle-ZapAccess/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-self-contained.zip) (no .NET install needed) or [framework-dependent](https://github.com/Scuttle-ZapAccess/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-framework-dependent.zip) (requires the .NET 10 runtime) zip from the same [Releases](https://github.com/Scuttle-ZapAccess/StreamDropCollector/releases) page and run `Stream Drop Collector.exe` directly - no installation step.
+Prefer a portable copy instead? Grab the [self-contained](https://github.com/ScuttleK/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-self-contained.zip) (no .NET install needed) or [framework-dependent](https://github.com/ScuttleK/StreamDropCollector/releases/latest/download/StreamDropCollector-latest-framework-dependent.zip) (requires the .NET 10 runtime) zip from the same [Releases](https://github.com/ScuttleK/StreamDropCollector/releases) page and run `Stream Drop Collector.exe` directly - no installation step.
 
 ## Building from Source
 
 ```bash
-git clone https://github.com/Scuttle-ZapAccess/StreamDropCollector.git
+git clone https://github.com/ScuttleK/StreamDropCollector.git
 cd StreamDropCollector
 dotnet restore
 dotnet publish UI/UI.csproj -c Release -r win-x64 -p:SelfContained=true

@@ -6,7 +6,10 @@
 		<Nullable>enable</Nullable>
 		<UseWPF>true</UseWPF>
 		<FileVersion>1.0.5</FileVersion>
-		<Copyright>tsgsOFFICIAL</Copyright>
+		<Authors>ScuttleK</Authors>
+		<Company>ScuttleK</Company>
+		<Product>Stream Drop Collector</Product>
+		<Copyright>Copyright © 2026 ScuttleK</Copyright>
 	</PropertyGroup>
 
 	<ItemGroup>

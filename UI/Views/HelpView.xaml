@@ -115,7 +115,7 @@
                         </TextBlock>
                         <TextBlock FontSize="16">
                             <Hyperlink Style="{StaticResource NeonHyperlink}"
-                                       NavigateUri="https://github.com/Scuttle-ZapAccess/automatic-twitch-ext-fork/releases/latest"
+                                       NavigateUri="https://github.com/ScuttleK/automatic-twitch-ext-fork/releases/latest"
                                        RequestNavigate="Hyperlink_RequestNavigate">
                                 Download the Browser Extension &#8594;
                             </Hyperlink>
@@ -142,7 +142,7 @@
                                   Fill="{DynamicResource AccentBrush}" Width="25" Height="25" Margin="0,0,12,0"/>
                             <TextBlock FontSize="16" VerticalAlignment="Center">
                                 <Hyperlink Style="{StaticResource NeonHyperlink}"
-                                           NavigateUri="https://github.com/Scuttle-ZapAccess/StreamDropCollector"
+                                           NavigateUri="https://github.com/ScuttleK/StreamDropCollector"
                                            RequestNavigate="Hyperlink_RequestNavigate">
                                     GitHub Repository
                                 </Hyperlink>

@@ -105,7 +105,21 @@ namespace Core
         {
             public event EventHandler? CanExecuteChanged;
             public bool CanExecute(object? parameter) => true;
-            public async void Execute(object? parameter) => await executeAsync(parameter is T t ? t : default);
+
+            public async void Execute(object? parameter)
+            {
+                try
+                {
+                    await executeAsync(parameter is T t ? t : default);
+                }
+                catch (Exception ex)
+                {
+                    // Execute is async void (required by ICommand), so an unawaited exception here
+                    // would otherwise surface as a generic "undefined error" dialog via App.xaml.cs's
+                    // DispatcherUnhandledException handler instead of a normal logged failure.
+                    AppLogger.Error("RelayCommand", "Command execution failed.", ex);
+                }
+            }
         }
     }
 }

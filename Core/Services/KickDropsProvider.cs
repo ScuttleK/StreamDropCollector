@@ -67,7 +67,7 @@ namespace Core.Services
                     if (!campaign.TryGetProperty("status", out JsonElement status) || status.GetString() != "active")
                         continue;
 
-                    campaign.TryGetProperty("category", out JsonElement category);
+                    bool hasCategory = campaign.TryGetProperty("category", out JsonElement category);
 
                     DropsReward[] rewards = [.. campaign.GetProperty("rewards")
                         .EnumerateArray()
@@ -100,14 +100,14 @@ namespace Core.Services
                     bool general = false;
 
                     // Category-less campaigns (e.g. Watch ANYONE, in any category)
-                    if (category.ValueKind == JsonValueKind.Undefined && connectUrls.Count == 0)
+                    if (!hasCategory && connectUrls.Count == 0)
                     {
                         connectUrls.Add("https://kick.com/browse?sort=viewers_high_to_low");
                         general = true;
                     }
 
                     // General drops = watch ANYONE in category
-                    if (connectUrls.Count == 0 && category.ValueKind != JsonValueKind.Undefined)
+                    if (connectUrls.Count == 0 && hasCategory)
                     {
                         string slug = category.GetProperty("slug").GetString()!;
                         connectUrls.Add($"https://kick.com/category/{slug}/drops");
@@ -117,7 +117,7 @@ namespace Core.Services
                     // Remove duplicates
                     connectUrls = [.. connectUrls.Distinct()];
 
-                    if (category.ValueKind == JsonValueKind.Undefined)
+                    if (!hasCategory)
                     {
                         JsonElement organization = campaign.GetProperty("organization");
 
@@ -210,9 +210,11 @@ namespace Core.Services
                                     IsClaimed = reward.GetProperty("claimed").GetBoolean()
                                 };
 
-                                // Replace in list (records are immutable)
+                                // Replace in list (records are immutable) - looked up by Id directly rather
+                                // than re-finding the pre-update reward and matching it via structural
+                                // equality, which would misfire if two rewards ever compared equal.
                                 List<DropsReward> list = [.. campaign.Rewards];
-                                int index = list.IndexOf(campaign.Rewards.First(r => r.Id == rewardId));
+                                int index = list.FindIndex(r => r.Id == rewardId);
                                 list[index] = targetReward;
 
                                 // Replace in campaign

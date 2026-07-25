@@ -14,7 +14,7 @@ namespace Core.Managers
         private static readonly Lazy<UpdateManager> _instance = new(() => new UpdateManager());
         public static UpdateManager Instance => _instance.Value;
 
-        private readonly string _repositoryOwner = "Scuttle-ZapAccess";
+        private readonly string _repositoryOwner = "ScuttleK";
         private readonly string _repositoryName = "StreamDropCollector";
 
         public event EventHandler<ProgressEventArgs>? DownloadProgress;
@@ -47,7 +47,10 @@ namespace Core.Managers
                 if (string.IsNullOrWhiteSpace(updateInfo?.Version))
                     throw new InvalidOperationException("Could not determine the latest version to download.");
 
-                string downloadUrl = $"https://github.com/{_repositoryOwner}/{_repositoryName}/releases/download/v{updateInfo.Version}/StreamDropCollector-v{updateInfo.Version}-self-contained.zip";
+                // Releases only publish the fixed "latest" filename now (no per-version assets), so this
+                // always resolves to whatever's newest via GitHub's special /releases/latest/download/
+                // endpoint rather than a URL built from updateInfo.Version.
+                string downloadUrl = $"https://github.com/{_repositoryOwner}/{_repositoryName}/releases/latest/download/StreamDropCollector-latest-self-contained.zip";
                 AppLogger.Info("UpdateManager", $"Downloading update from {downloadUrl}");
 
                 if (Directory.Exists(updatePath))

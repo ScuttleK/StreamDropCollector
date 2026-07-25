@@ -75,16 +75,23 @@ namespace Core.Services
                 {
                     AppLogger.Debug("TwitchGql", $"[RefreshHeaders] Attempt {attempt}/{maxAttempts} – Navigating to drops/campaigns");
 
-                    // Fresh navigation every attempt (important for clean integrity token)
-                    await _host.NavigateAsync($"https://www.twitch.tv/drops/campaigns?t={DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
+                    // All WebView2 access (per IWebViewHost's contract) must happen on the UI thread, but
+                    // RefreshHeadersAsync itself is called from background-timer-driven paths too - so the
+                    // WebView2-touching work is marshaled here rather than relying on every caller to
+                    // remember to wrap it. The retry backoff delay below stays off the UI thread on purpose.
+                    string[] results = await await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
+                    {
+                        // Fresh navigation every attempt (important for clean integrity token)
+                        await _host.NavigateAsync($"https://www.twitch.tv/drops/campaigns?t={DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
 
-                    // Parallel capture tasks
-                    Task<string> clientIdTask = _host.CaptureRequestHeaderAsync("Client-ID", "gql.twitch.tv", 10000, ct);
-                    Task<string> integrityTask = _host.CaptureRequestHeaderAsync("Client-Integrity", "gql.twitch.tv", 10000, ct);
-                    Task<string> deviceIdTask = _host.CaptureRequestHeaderAsync("X-Device-Id", "gql.twitch.tv", 10000, ct);
-                    Task<string> authTokenTask = GetAuthTokenFromCookieAsync();
+                        // Parallel capture tasks
+                        Task<string> clientIdTask = _host.CaptureRequestHeaderAsync("Client-ID", "gql.twitch.tv", 10000, ct);
+                        Task<string> integrityTask = _host.CaptureRequestHeaderAsync("Client-Integrity", "gql.twitch.tv", 10000, ct);
+                        Task<string> deviceIdTask = _host.CaptureRequestHeaderAsync("X-Device-Id", "gql.twitch.tv", 10000, ct);
+                        Task<string> authTokenTask = GetAuthTokenFromCookieAsync();
 
-                    string[] results = await Task.WhenAll(clientIdTask, integrityTask, deviceIdTask, authTokenTask);
+                        return await Task.WhenAll(clientIdTask, integrityTask, deviceIdTask, authTokenTask);
+                    });
 
                     string clientId = results[0];
                     string integrityToken = results[1];
@@ -459,7 +466,9 @@ namespace Core.Services
         public async Task<bool> ClaimDropAsync(string campaignId, string rewardId, CancellationToken ct = default)
         {
             AppLogger.Info("TwitchGql", $"ClaimDrop started. campaignId={campaignId}, rewardId={rewardId}");
-            await await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await RefreshHeadersAsync(ct));
+            // RefreshHeadersAsync marshals its own WebView2 access to the UI thread internally now, so no
+            // Dispatcher wrap is needed at the call site.
+            await RefreshHeadersAsync(ct);
 
             // Step 1. Construct the payload, according to the above format
             string operationName = "DropsPage_ClaimDropRewards";

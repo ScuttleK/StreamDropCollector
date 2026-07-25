@@ -98,8 +98,8 @@ namespace UI
             // Initialize commands
             ToggleWindowCommand = new RelayCommand(o => ToggleWindowState());
             CloseCommand = new RelayCommand(o => CloseApplication());
-            OpenGithubCommand = new RelayCommand(o => Core.Utility.LaunchWeb("https://github.com/Scuttle-ZapAccess/StreamDropCollector"));
-            OpenReleasesCommand = new RelayCommand(o => Core.Utility.LaunchWeb("https://github.com/Scuttle-ZapAccess/StreamDropCollector/releases"));
+            OpenGithubCommand = new RelayCommand(o => Core.Utility.LaunchWeb("https://github.com/ScuttleK/StreamDropCollector"));
+            OpenReleasesCommand = new RelayCommand(o => Core.Utility.LaunchWeb("https://github.com/ScuttleK/StreamDropCollector/releases"));
 
             // Event handler for double-click on TaskbarIcon
             MyNotifyIcon.TrayMouseDoubleClick += OnTrayIconDoubleClick;

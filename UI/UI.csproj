@@ -11,7 +11,10 @@
 		<AssemblyTitle>Stream Drop Collector</AssemblyTitle>
 		<AssemblyName>Stream Drop Collector</AssemblyName>
 		<FileVersion>1.0.5</FileVersion>
-		<Copyright>tsgsOFFICIAL</Copyright>
+		<Authors>ScuttleK</Authors>
+		<Company>ScuttleK</Company>
+		<Product>Stream Drop Collector</Product>
+		<Copyright>Copyright © 2026 ScuttleK</Copyright>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -41,18 +44,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="bin\Release\net10.0-windows10.0.17763.0\publish\win-x64\**" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Compile Remove="bin\Release\net10.0-windows10.0.17763.0\publish\win-x64\Stream Drop Collector.exe.WebView2\**" />
-		<Compile Remove="Windows\**" />
-		<EmbeddedResource Remove="bin\Release\net10.0-windows10.0.17763.0\publish\win-x64\Stream Drop Collector.exe.WebView2\**" />
-		<EmbeddedResource Remove="Windows\**" />
-		<None Remove="bin\Release\net10.0-windows10.0.17763.0\publish\win-x64\Stream Drop Collector.exe.WebView2\**" />
-		<None Remove="Windows\**" />
-		<Page Remove="bin\Release\net10.0-windows10.0.17763.0\publish\win-x64\Stream Drop Collector.exe.WebView2\**" />
-		<Page Remove="Windows\**" />
 		<Page Remove="Themes\ModernDark.xaml" />
 	</ItemGroup>
 

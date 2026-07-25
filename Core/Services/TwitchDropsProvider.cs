@@ -28,6 +28,9 @@ namespace Core.Services
 
                 JsonArray dashboard = await gql.QueryFullDropsDashboardAsync(ct);
 
+                if (dashboard.Count < 2)
+                    throw new InvalidOperationException($"Drops dashboard GQL batch returned {dashboard.Count} response(s), expected 2 - Twitch may have changed the response shape.");
+
                 JsonObject ongoingCampaigns = dashboard[0]!.AsObject();
                 JsonObject activeCampaigns = dashboard[1]!.AsObject();
 
@@ -213,8 +216,15 @@ namespace Core.Services
             string gameName = game?["displayName"]?.GetValue<string>() ?? "Unknown Game";
             string? gameImage = detailedData?["imageURL"]?.GetValue<string>();
 
-            DateTimeOffset startsAt = DateTimeOffset.Parse(detailedData?["startAt"]?.GetValue<string>() ?? DateTimeOffset.UtcNow.ToString("o"));
-            DateTimeOffset endsAt = DateTimeOffset.Parse(detailedData?["endAt"]?.GetValue<string>() ?? startsAt.AddDays(7).ToString("o"));
+            // A real campaign always has both dates - if either is missing/unparseable, treat this as
+            // malformed data and skip it (via the null return below) rather than fabricating a fake
+            // window, which could make the miner watch an already-expired or not-yet-started campaign.
+            if (!DateTimeOffset.TryParse(detailedData?["startAt"]?.GetValue<string>(), out DateTimeOffset startsAt) ||
+                !DateTimeOffset.TryParse(detailedData?["endAt"]?.GetValue<string>(), out DateTimeOffset endsAt))
+            {
+                AppLogger.Warn("TwitchDrops", $"Skipping campaign '{name}' (id={id}) - missing or unparseable startAt/endAt.");
+                return null;
+            }
 
             List<string> connectUrls = new List<string>();
 
