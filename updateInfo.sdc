@@ -1,10 +1,18 @@
 {
-  "version": "1.0.8",
-  "type": "Feature",
+  "version": "1.0.9",
+  "type": "Fix",
   "changelog": [
-    "Drops that fail to auto-claim now show the actual failure reason in red right next to that reward (e.g. \"[ERROR] Unable to claim reward. Please check that your accounts are properly connected and all requirements are met.\") instead of only logging it silently, for both Twitch and Kick"
+    "Fixed a bug where updating the app moved it into a different folder behind the scenes instead of updating in place, which disconnected your Twitch/Kick logins (and wiped the Watch Streak queue) after the update finished - if this already happened to you, your old login session is still intact wherever the app was originally installed (check your Start Menu/Desktop shortcut)",
+    "The Watch Streak queue is now also explicitly protected during an update, as extra insurance"
   ],
   "historic_versions": [
+    {
+      "version": "1.0.8",
+      "type": "Feature",
+      "changelog": [
+        "Drops that fail to auto-claim now show the actual failure reason in red right next to that reward (e.g. \"[ERROR] Unable to claim reward. Please check that your accounts are properly connected and all requirements are met.\") instead of only logging it silently, for both Twitch and Kick"
+      ]
+    },
     {
       "version": "1.0.7",
       "type": "Fix",
