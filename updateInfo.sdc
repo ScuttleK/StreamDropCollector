@@ -1,10 +1,20 @@
 {
-  "version": "1.0.10",
+  "version": "1.0.11",
   "type": "Feature",
   "changelog": [
-    "Added an \"Enable Watch Streak\" toggle, off by default - the feature now stays fully inactive until you turn it on, and the toggle is grayed out with an info hint until Twitch is connected"
+    "Fixed the Watch Streak enable toggle sometimes staying grayed out even when Twitch was actually connected on the Dashboard",
+    "Failed drop claims now show the error reason on the Dashboard too, not just Inventory",
+    "Error and info messages now use icon banners (red warning triangle, blue info) instead of \"[ERROR]\"/\"[INFO]\" text prefixes",
+    "The uninstaller now offers to fully wipe all saved settings, connected logins, and cached data, for a completely clean reinstall"
   ],
   "historic_versions": [
+    {
+      "version": "1.0.10",
+      "type": "Feature",
+      "changelog": [
+        "Added an \"Enable Watch Streak\" toggle, off by default - the feature now stays fully inactive until you turn it on, and the toggle is grayed out with an info hint until Twitch is connected"
+      ]
+    },
     {
       "version": "1.0.9",
       "type": "Fix",
