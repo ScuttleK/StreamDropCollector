@@ -548,6 +548,16 @@ namespace UI.Views
                 });
             };
 
+            DropsInventoryManager.Instance.RewardClaimErrorChanged += (campaignId, rewardId, error) =>
+            {
+                Dispatcher.InvokeAsync(() =>
+                {
+                    var item = _watchingItems.FirstOrDefault(i => i.Id == campaignId)
+                        ?? _completedItems.FirstOrDefault(i => i.Id == campaignId);
+                    item?.ApplyClaimError(rewardId, error);
+                });
+            };
+
             Loaded += async (s, e) => await OnLoadedAsync();
         }
 
@@ -808,6 +818,7 @@ namespace UI.Views
                     TwitchConnectionStatus = "Not Connected";
                     TwitchConnectionColor = "Red";
                     TwitchLoginButton.IsEnabled = true;
+                    DropsInventoryManager.Instance.SetTwitchConnected(false);
                     break;
 
                 case ConnectionStatus.Validating:
@@ -821,6 +832,7 @@ namespace UI.Views
                     TwitchConnectionColor = "Lime";
                     TwitchLoginButton.IsEnabled = false; // disable when already logged in
                     ScheduleDropsLoad();
+                    DropsInventoryManager.Instance.SetTwitchConnected(true);
                     break;
                 case ConnectionStatus.Connecting:
                     TwitchConnectionStatus = "Connecting...";
@@ -1145,7 +1157,7 @@ namespace UI.Views
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        public DropsCampaign Campaign { get; }
+        public DropsCampaign Campaign { get; private set; }
         public string Id => Campaign.Id;
         public string Name => Campaign.Name;
         public string GameName => Campaign.GameName;
@@ -1153,6 +1165,27 @@ namespace UI.Views
         public Platform Platform => Campaign.Platform;
         public IReadOnlyList<DropsReward> Rewards => Campaign.Rewards;
         public bool AllRewardsClaimed => Campaign.AllRewardsClaimed;
+
+        /// <summary>
+        /// Applies a claim-failure (or, with error null, claim-success) update to the matching reward. This
+        /// item's Campaign/Rewards come from DashboardView's own independent campaign fetch, a separate copy
+        /// from DropsInventoryManager.ActiveCampaigns where the actual claim attempt happened - so without
+        /// this, DropsInventoryManager.RewardClaimErrorChanged firing has no way to reach this Dashboard-side
+        /// copy at all, which is exactly why the claim-error banner worked in Inventory but not here.
+        /// </summary>
+        public void ApplyClaimError(string rewardId, string? error)
+        {
+            DropsReward? existing = Campaign.Rewards.FirstOrDefault(r => r.Id == rewardId);
+            if (existing == null || existing.LastClaimError == error)
+                return;
+
+            List<DropsReward> updatedRewards = Campaign.Rewards
+                .Select(r => r.Id == rewardId ? r with { LastClaimError = error } : r)
+                .ToList();
+
+            Campaign = Campaign with { Rewards = updatedRewards };
+            OnPropertyChanged(nameof(Rewards));
+        }
 
         // True when this campaign has a fixed streamer list (not a "watch anyone" general drop)
         public bool HasSpecificStreamers => !Campaign.IsGeneralDrop && Campaign.ConnectUrls.Count > 0;

@@ -2,7 +2,6 @@ using Core.Managers;
 using Core.Models;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Threading;
 
 namespace UI.Views
 {
@@ -15,7 +14,6 @@ namespace UI.Views
         public static WatchStreakView Instance => _instance.Value;
 
         private readonly HiddenWebViewHost _webView = new();
-        private readonly DispatcherTimer _twitchGateTimer = new() { Interval = TimeSpan.FromSeconds(15) };
 
         // Guards WatchStreakEnabledCheckBox_CheckedChanged while we set IsChecked from code (constructor,
         // gate refresh) so that doesn't get mistaken for the user toggling it and re-save/re-trigger.
@@ -34,10 +32,11 @@ namespace UI.Views
             SelectCurrentPollInterval();
 
             SetCheckBoxChecked(UISettingsManager.Instance.WatchStreakEnabled);
-            _ = RefreshTwitchGateAsync();
+            RefreshTwitchGate();
 
-            _twitchGateTimer.Tick += async (s, e) => await RefreshTwitchGateAsync();
-            _twitchGateTimer.Start();
+            // Instant, event-driven instead of polling a cookie every N seconds - fires the moment
+            // Dashboard's own login validation confirms (or loses) a Twitch session.
+            DropsInventoryManager.Instance.TwitchConnectionChanged += _ => Dispatcher.InvokeAsync(RefreshTwitchGate);
         }
 
         private void SetCheckBoxChecked(bool value)
@@ -54,14 +53,14 @@ namespace UI.Views
         }
 
         /// <summary>
-        /// Re-checks whether Twitch is connected and updates the enable toggle's clickability and the
-        /// "Twitch needs to be connected first" hint accordingly. Doesn't force the toggle off if it's
-        /// already on and Twitch happens to disconnect later - it just becomes un-clickable (grayed out)
-        /// until reconnected, rather than silently discarding the user's choice.
+        /// Updates the enable toggle's clickability and the "Twitch needs to be connected first" hint to
+        /// match DropsInventoryManager's live Twitch connection status. Doesn't force the toggle off if
+        /// it's already on and Twitch happens to disconnect later - it just becomes un-clickable (grayed
+        /// out) until reconnected, rather than silently discarding the user's choice.
         /// </summary>
-        private async Task RefreshTwitchGateAsync()
+        private void RefreshTwitchGate()
         {
-            bool isConnected = await WatchStreakManager.Instance.IsTwitchAccountConnectedAsync();
+            bool isConnected = WatchStreakManager.Instance.IsTwitchAccountConnected;
 
             WatchStreakEnabledCheckBox.IsEnabled = isConnected;
             TwitchRequiredHint.Visibility = isConnected ? Visibility.Collapsed : Visibility.Visible;
@@ -103,10 +102,10 @@ namespace UI.Views
             }
         }
 
-        private async void RefreshButton_Click(object sender, RoutedEventArgs e)
+        private void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
             WatchStreakManager.Instance.RefreshNow();
-            await RefreshTwitchGateAsync();
+            RefreshTwitchGate();
         }
 
         private void UpdateEmptyHintVisibility()

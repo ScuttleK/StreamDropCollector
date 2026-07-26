@@ -909,13 +909,17 @@
                                                                         </Style.Triggers>
                                                                     </Style>
                                                                 </Border.Style>
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="⚠" FontSize="11" FontWeight="Bold"
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <TextBlock Grid.Column="0" Text="⚠" FontSize="11" FontWeight="Bold"
                                                                                Foreground="{DynamicResource DangerBrush}"
                                                                                Margin="0,0,6,0" VerticalAlignment="Top"/>
-                                                                    <TextBlock Text="{Binding LastClaimError}" FontSize="11" FontWeight="SemiBold"
+                                                                    <TextBlock Grid.Column="1" Text="{Binding LastClaimError}" FontSize="11" FontWeight="SemiBold"
                                                                                Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap"/>
-                                                                </StackPanel>
+                                                                </Grid>
                                                             </Border>
                                                         </StackPanel>
                                                     </DataTemplate>

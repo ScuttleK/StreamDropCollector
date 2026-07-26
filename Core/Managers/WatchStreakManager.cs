@@ -113,47 +113,15 @@ namespace Core.Managers
         }
 
         /// <summary>
-        /// Checks whether a Twitch login session is currently present, for gating the UI's Watch Streak
-        /// enable toggle (the feature is pointless without Twitch connected, since the bonus it watches for
-        /// is Twitch-only). A lightweight cookie-presence check rather than a full page load/validation --
-        /// good enough for an enablement gate; TickAsync's own polling will surface any deeper auth problem.
-        /// Prefers DropsInventoryManager's Twitch WebView host over this manager's own -- that one is only
-        /// ever registered after Dashboard's own login validation already confirmed it working, whereas this
-        /// manager's dedicated host sits unused until an actual watch starts and could still be spinning up
-        /// its WebView2 environment even while a real Twitch session is already live and connected elsewhere,
-        /// which is exactly what made this gate wrongly stay grayed out early after launch.
+        /// Whether Twitch is currently connected, for gating the UI's Watch Streak enable toggle (the
+        /// feature is pointless without Twitch connected, since the bonus it watches for is Twitch-only).
+        /// Reads DropsInventoryManager's live status - the same one Dashboard's own login validation
+        /// maintains - instead of independently re-deriving connectivity (e.g. via a cookie check through
+        /// this manager's own WebView2 host), which previously could disagree with Dashboard because that
+        /// separate host might still be spinning up its own WebView2 environment even while a real Twitch
+        /// session was already live and connected elsewhere.
         /// </summary>
-        public async Task<bool> IsTwitchAccountConnectedAsync()
-        {
-            IWebViewHost? host = DropsInventoryManager.Instance.TwitchWebView;
-            if (host == null)
-            {
-                host = _webView;
-                if (host == null)
-                    return false;
-
-                try
-                {
-                    await host.EnsureInitializedAsync();
-                }
-                catch (Exception ex)
-                {
-                    AppLogger.Warn("WatchStreak", $"Failed to initialize WebView for Twitch connection check: {ex.Message}");
-                    return false;
-                }
-            }
-
-            try
-            {
-                string? token = await host.GetCookieValueAsync("https://twitch.tv", "auth-token");
-                return !string.IsNullOrEmpty(token);
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Warn("WatchStreak", $"Failed to check Twitch connection status: {ex.Message}");
-                return false;
-            }
-        }
+        public bool IsTwitchAccountConnected => DropsInventoryManager.Instance.IsTwitchConnected;
 
         private static string? ExtractChannelLogin(string input)
         {

@@ -168,11 +168,19 @@ namespace UI
                             "WatchStreakQueue.json"
                         ];
 
-                        // Delete all files, except for the ones in filesToKeep
+                        // Delete all files, except for the ones in filesToKeep. Also spares Inno Setup's own
+                        // "unins###.exe"/"unins###.dat" (whichever number this install happens to have) --
+                        // those exist only for installer-based installs (dotnet publish's own output, which
+                        // is what an update actually extracts, never includes them), so without this an
+                        // in-place update would silently delete the uninstaller while its Add/Remove Programs
+                        // entry keeps pointing at the now-missing file. Discovered exactly this way: a real
+                        // v1.0.9 -> v1.0.10 update leaving "Windows cannot find ...\unins000.exe".
                         foreach (string file in Directory.GetFiles(basePath))
                         {
                             string fileName = Path.GetFileName(file);
                             if (Array.Exists(filesToKeep, f => f.Equals(fileName, StringComparison.OrdinalIgnoreCase)))
+                                continue;
+                            if (fileName.StartsWith("unins", StringComparison.OrdinalIgnoreCase))
                                 continue;
 
                             File.Delete(file);

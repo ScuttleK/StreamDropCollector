@@ -22,6 +22,22 @@ namespace Core.Managers
         public IWebViewHost? TwitchWebView { get; private set; }
         public IWebViewHost? KickWebView { get; private set; }
 
+        // Live Twitch connection status, mirrored here from DashboardView's own login validation - the
+        // single authoritative source other views (e.g. Watch Streak's enable toggle) should read instead
+        // of re-deriving their own connectivity check, which has its own readiness/timing pitfalls (a
+        // separate, not-yet-initialized WebView2 host can disagree with what Dashboard already knows).
+        public bool IsTwitchConnected { get; private set; }
+        public event Action<bool>? TwitchConnectionChanged;
+
+        public void SetTwitchConnected(bool isConnected)
+        {
+            if (IsTwitchConnected == isConnected)
+                return;
+
+            IsTwitchConnected = isConnected;
+            TwitchConnectionChanged?.Invoke(isConnected);
+        }
+
         public event Action<byte, byte>? TwitchProgressChanged;
         public event Action<byte, byte>? KickProgressChanged;
         public event Action<string>? MinerStatusChanged;
@@ -37,6 +53,12 @@ namespace Core.Managers
         public event Action<string>? CampaignCompleted;
         // Fires with the set of campaign IDs that were skipped this evaluation cycle (all streamers offline).
         public event Action<IReadOnlySet<string>>? CampaignsSkippedOffline;
+        // Fires (campaignId, rewardId, error) whenever a reward's claim-failure state changes here - error
+        // is null when a claim just succeeded (clearing any earlier failure). ActiveCampaigns is this
+        // manager's own tracked copy of campaign/reward state; Dashboard's "Watching"/"Completed" queue is
+        // built from a separate, independent campaign fetch (DashboardView's own _dropsService call), so
+        // this event is what lets that separate copy learn about a claim error at all.
+        public event Action<string, string, string?>? RewardClaimErrorChanged;
 
         // Currently watched campaigns
         private DropsCampaign? _currentTwitchCampaign;
@@ -1287,6 +1309,9 @@ namespace Core.Managers
                 allClaimed = updatedCampaign.AllRewardsClaimed;
             });
 
+            if (updated)
+                RewardClaimErrorChanged?.Invoke(campaignId, rewardId, null);
+
             if (allClaimed)
             {
                 AppLogger.Info("Miner", $"All rewards claimed for campaign {campaignId} — firing CampaignCompleted.");
@@ -1330,6 +1355,8 @@ namespace Core.Managers
 
                 ActiveCampaigns[campaignIndex] = existingCampaign with { Rewards = updatedRewards };
             });
+
+            RewardClaimErrorChanged?.Invoke(campaignId, rewardId, resolvedError);
         }
         /// <summary>
         /// Re-stamps any remembered claim-failure messages (<see cref="_rewardClaimErrors"/>) onto the matching
