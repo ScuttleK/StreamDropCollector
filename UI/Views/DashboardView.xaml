@@ -836,62 +836,88 @@
                                             <ItemsControl ItemsSource="{Binding Rewards}" Margin="34,8,0,0">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Grid Margin="0,3,0,0">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="18"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                            </Grid.ColumnDefinitions>
-                                                            <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="12">
-                                                                <TextBlock.Style>
-                                                                    <Style TargetType="TextBlock">
-                                                                        <Setter Property="Text"       Value="·"/>
-                                                                        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding IsClaimed}" Value="True">
-                                                                                <Setter Property="Text"       Value="✓"/>
-                                                                                <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </TextBlock.Style>
-                                                            </TextBlock>
-                                                            <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12"
-                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="2,0,10,0">
-                                                                <TextBlock.Style>
-                                                                    <Style TargetType="TextBlock">
-                                                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding IsClaimed}" Value="True">
-                                                                                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </TextBlock.Style>
-                                                            </TextBlock>
-                                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                                                <TextBlock Text="Claimed" FontSize="11" Foreground="{DynamicResource SuccessBrush}"
-                                                                           Visibility="{Binding IsClaimed, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                                                <TextBlock FontSize="11" Foreground="{DynamicResource TextMutedBrush}">
+                                                        <StackPanel Margin="0,3,0,0">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="18"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="12">
                                                                     <TextBlock.Style>
                                                                         <Style TargetType="TextBlock">
-                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                            <Setter Property="Text"       Value="·"/>
+                                                                            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
                                                                             <Style.Triggers>
                                                                                 <DataTrigger Binding="{Binding IsClaimed}" Value="True">
-                                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                    <Setter Property="Text"       Value="✓"/>
+                                                                                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
                                                                                 </DataTrigger>
                                                                             </Style.Triggers>
                                                                         </Style>
                                                                     </TextBlock.Style>
-                                                                    <TextBlock.Text>
-                                                                        <MultiBinding StringFormat="{}{0} / {1} min">
-                                                                            <Binding Path="ProgressMinutes"/>
-                                                                            <Binding Path="RequiredMinutes"/>
-                                                                        </MultiBinding>
-                                                                    </TextBlock.Text>
                                                                 </TextBlock>
-                                                            </StackPanel>
-                                                        </Grid>
+                                                                <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12"
+                                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="2,0,10,0">
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding IsClaimed}" Value="True">
+                                                                                    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                    <TextBlock Text="Claimed" FontSize="11" Foreground="{DynamicResource SuccessBrush}"
+                                                                               Visibility="{Binding IsClaimed, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                                    <TextBlock FontSize="11" Foreground="{DynamicResource TextMutedBrush}">
+                                                                        <TextBlock.Style>
+                                                                            <Style TargetType="TextBlock">
+                                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsClaimed}" Value="True">
+                                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </TextBlock.Style>
+                                                                        <TextBlock.Text>
+                                                                            <MultiBinding StringFormat="{}{0} / {1} min">
+                                                                                <Binding Path="ProgressMinutes"/>
+                                                                                <Binding Path="RequiredMinutes"/>
+                                                                            </MultiBinding>
+                                                                        </TextBlock.Text>
+                                                                    </TextBlock>
+                                                                </StackPanel>
+                                                            </Grid>
+
+                                                            <!-- Most recent failed claim attempt, if any -->
+                                                            <Border Margin="18,3,0,0" Padding="6,4" CornerRadius="6"
+                                                                    Background="#33E5534B"
+                                                                    BorderBrush="{DynamicResource DangerBrush}"
+                                                                    BorderThickness="1">
+                                                                <Border.Style>
+                                                                    <Style TargetType="Border">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding ClaimErrorDisplayText}" Value="">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Border.Style>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="⚠" FontSize="11" FontWeight="Bold"
+                                                                               Foreground="{DynamicResource DangerBrush}"
+                                                                               Margin="0,0,6,0" VerticalAlignment="Top"/>
+                                                                    <TextBlock Text="{Binding LastClaimError}" FontSize="11" FontWeight="SemiBold"
+                                                                               Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap"/>
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </StackPanel>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>

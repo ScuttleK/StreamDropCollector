@@ -148,13 +148,17 @@
                       Content="Enable Watch Streak"
                       Checked="WatchStreakEnabledCheckBox_CheckedChanged"
                       Unchecked="WatchStreakEnabledCheckBox_CheckedChanged"/>
-            <TextBlock x:Name="TwitchRequiredHint"
-                       Text="[INFO] Twitch needs to be connected first"
-                       Foreground="Gold"
-                       FontWeight="SemiBold"
-                       FontSize="12"
-                       Margin="32,6,0,0"
-                       Visibility="Collapsed"/>
+            <Border x:Name="TwitchRequiredHint"
+                    Margin="32,6,0,0" Padding="6,4" CornerRadius="6"
+                    Background="#331E90FF" BorderBrush="DodgerBlue" BorderThickness="1"
+                    Visibility="Collapsed" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="ℹ" FontSize="12" FontWeight="Bold" Foreground="DodgerBlue"
+                               Margin="0,0,6,0" VerticalAlignment="Top"/>
+                    <TextBlock Text="Twitch needs to be connected first" FontSize="12" FontWeight="SemiBold"
+                               Foreground="DodgerBlue" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
         </StackPanel>
 
         <!-- AVAILABILITY CHECK FREQUENCY + REFRESH -->

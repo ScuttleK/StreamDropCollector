@@ -117,16 +117,35 @@ namespace Core.Managers
         /// enable toggle (the feature is pointless without Twitch connected, since the bonus it watches for
         /// is Twitch-only). A lightweight cookie-presence check rather than a full page load/validation --
         /// good enough for an enablement gate; TickAsync's own polling will surface any deeper auth problem.
+        /// Prefers DropsInventoryManager's Twitch WebView host over this manager's own -- that one is only
+        /// ever registered after Dashboard's own login validation already confirmed it working, whereas this
+        /// manager's dedicated host sits unused until an actual watch starts and could still be spinning up
+        /// its WebView2 environment even while a real Twitch session is already live and connected elsewhere,
+        /// which is exactly what made this gate wrongly stay grayed out early after launch.
         /// </summary>
         public async Task<bool> IsTwitchAccountConnectedAsync()
         {
-            if (_webView == null)
-                return false;
+            IWebViewHost? host = DropsInventoryManager.Instance.TwitchWebView;
+            if (host == null)
+            {
+                host = _webView;
+                if (host == null)
+                    return false;
+
+                try
+                {
+                    await host.EnsureInitializedAsync();
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("WatchStreak", $"Failed to initialize WebView for Twitch connection check: {ex.Message}");
+                    return false;
+                }
+            }
 
             try
             {
-                await _webView.EnsureInitializedAsync();
-                string? token = await _webView.GetCookieValueAsync("https://twitch.tv", "auth-token");
+                string? token = await host.GetCookieValueAsync("https://twitch.tv", "auth-token");
                 return !string.IsNullOrEmpty(token);
             }
             catch (Exception ex)

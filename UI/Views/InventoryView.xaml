@@ -279,14 +279,12 @@
                                                                          Margin="0,7,0,0"/>
 
                                                             <!-- Most recent failed claim attempt, if any -->
-                                                            <TextBlock Text="{Binding ClaimErrorDisplayText}"
-                                                                       Foreground="{DynamicResource DangerBrush}"
-                                                                       FontWeight="SemiBold"
-                                                                       FontSize="11"
-                                                                       TextWrapping="Wrap"
-                                                                       Margin="0,5,0,0">
-                                                                <TextBlock.Style>
-                                                                    <Style TargetType="TextBlock">
+                                                            <Border Margin="0,5,0,0" Padding="6,4" CornerRadius="6"
+                                                                    Background="#33E5534B"
+                                                                    BorderBrush="{DynamicResource DangerBrush}"
+                                                                    BorderThickness="1">
+                                                                <Border.Style>
+                                                                    <Style TargetType="Border">
                                                                         <Setter Property="Visibility" Value="Visible"/>
                                                                         <Style.Triggers>
                                                                             <DataTrigger Binding="{Binding ClaimErrorDisplayText}" Value="">
@@ -294,8 +292,15 @@
                                                                             </DataTrigger>
                                                                         </Style.Triggers>
                                                                     </Style>
-                                                                </TextBlock.Style>
-                                                            </TextBlock>
+                                                                </Border.Style>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="⚠" FontSize="12" FontWeight="Bold"
+                                                                               Foreground="{DynamicResource DangerBrush}"
+                                                                               Margin="0,0,6,0" VerticalAlignment="Top"/>
+                                                                    <TextBlock Text="{Binding LastClaimError}" FontSize="11" FontWeight="SemiBold"
+                                                                               Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap"/>
+                                                                </StackPanel>
+                                                            </Border>
                                                         </StackPanel>
 
                                                         <!-- CLAIMED Badge -->

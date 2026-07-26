@@ -71,3 +71,38 @@ Name: "{autodesktop}\Stream Drop Collector"; Filename: "{app}\{#MyAppExeName}"; 
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch Stream Drop Collector"; Flags: nowait postinstall skipifsilent
+
+[Code]
+var
+  ClearAllData: Boolean;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  // Asked right after the standard "are you sure" confirmation (usUninstall fires once removal has
+  // actually begun), not before it - so the extra question only comes up once the user has already
+  // committed to uninstalling at all. Defaults to "no" under a silent/unattended uninstall (no one
+  // is present to answer, and destroying data without explicit confirmation is never the safe default).
+  if (CurUninstallStep = usUninstall) then
+  begin
+    if UninstallSilent() then
+      ClearAllData := False
+    else
+      ClearAllData := (MsgBox(
+        'Also permanently delete all saved settings, connected Twitch/Kick logins, and cached data?' + #13#10 + #13#10 +
+        'This removes everything the app has ever stored on this PC, as if it were never installed - ' +
+        'reinstalling afterward will start completely fresh. This cannot be undone.',
+        mbConfirmation, MB_YESNO) = IDYES);
+  end;
+
+  // Runs after Inno's own uninstall has already removed everything it originally installed.
+  if (CurUninstallStep = usPostUninstall) and ClearAllData then
+  begin
+    // {app} itself: catches anything the running app created there at runtime that Inno's uninstall
+    // log never tracked (chiefly the WebView2 profile, which is where Twitch/Kick login cookies live).
+    DelTree(ExpandConstant('{app}'), True, True, True);
+
+    // %APPDATA%\Stream Drop Collector: settings, Watch Streak queue, caches, logs - always lived here
+    // separately from {app}, never installed or tracked by Setup at all.
+    DelTree(ExpandConstant('{userappdata}\Stream Drop Collector'), True, True, True);
+  end;
+end;
