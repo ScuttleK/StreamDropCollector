@@ -33,10 +33,32 @@ namespace UI.Views
 
             SetCheckBoxChecked(UISettingsManager.Instance.WatchStreakEnabled);
             RefreshTwitchGate();
+            UpdateSectionsEnabledState();
 
             // Instant, event-driven instead of polling a cookie every N seconds - fires the moment
             // Dashboard's own login validation confirms (or loses) a Twitch session.
             DropsInventoryManager.Instance.TwitchConnectionChanged += _ => Dispatcher.InvokeAsync(RefreshTwitchGate);
+        }
+
+        /// <summary>
+        /// Grays out and disables everything below the enable toggle (poll frequency, add-streamer box,
+        /// the queue itself) whenever Watch Streak is off - there's no point letting the user configure or
+        /// manage a queue for a feature that isn't running at all. IsEnabled alone would stop clicks from
+        /// doing anything, but these controls use fully custom ControlTemplates (AccentButtonStyle,
+        /// IconButtonStyle) that don't define a disabled-state visual, so Opacity is set alongside it to
+        /// actually show the grayed-out look rather than just silently not responding.
+        /// </summary>
+        private void UpdateSectionsEnabledState()
+        {
+            bool enabled = UISettingsManager.Instance.WatchStreakEnabled;
+            double opacity = enabled ? 1.0 : 0.4;
+
+            AvailabilitySectionPanel.IsEnabled = enabled;
+            AvailabilitySectionPanel.Opacity = opacity;
+            AddStreamerSection.IsEnabled = enabled;
+            AddStreamerSection.Opacity = opacity;
+            QueueSection.IsEnabled = enabled;
+            QueueSection.Opacity = opacity;
         }
 
         private void SetCheckBoxChecked(bool value)
@@ -72,6 +94,7 @@ namespace UI.Views
                 return;
 
             UISettingsManager.Instance.WatchStreakEnabled = WatchStreakEnabledCheckBox.IsChecked == true;
+            UpdateSectionsEnabledState();
         }
 
         private void SelectCurrentPollInterval()

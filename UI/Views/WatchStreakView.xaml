@@ -166,7 +166,7 @@
         </StackPanel>
 
         <!-- AVAILABILITY CHECK FREQUENCY + REFRESH -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,4" VerticalAlignment="Center">
+        <StackPanel x:Name="AvailabilitySectionPanel" Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,4" VerticalAlignment="Center">
             <TextBlock Text="Availability Check Frequency:"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        VerticalAlignment="Center"
@@ -194,7 +194,7 @@
         </StackPanel>
 
         <!-- ADD STREAMER -->
-        <Border Grid.Row="3"
+        <Border x:Name="AddStreamerSection" Grid.Row="3"
                 Background="{DynamicResource CardBackgroundBrush}"
                 CornerRadius="12" Padding="20" Margin="0,12,0,20"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
@@ -244,7 +244,7 @@
         </Border>
 
         <!-- QUEUE -->
-        <Border Grid.Row="4"
+        <Border x:Name="QueueSection" Grid.Row="4"
                 Background="{DynamicResource CardBackgroundBrush}"
                 CornerRadius="12" Padding="20"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">

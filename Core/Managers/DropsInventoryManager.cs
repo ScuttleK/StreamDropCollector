@@ -906,6 +906,19 @@ namespace Core.Managers
                         if (token.IsCancellationRequested)
                             return;
 
+                        // Re-checked fresh on every selection pass (a manual re-activation, a queue
+                        // reorder, or the normal periodic re-evaluation all funnel through here) - a
+                        // campaign with an unresolved claim error on any reward is skipped in favor of the
+                        // next candidate, exactly like an offline/wrong-category streamer would be, rather
+                        // than getting stuck retrying the same failing claim indefinitely.
+                        if (bestTwitch.Rewards.Any(r => !string.IsNullOrEmpty(r.LastClaimError)))
+                        {
+                            AppLogger.Warn("TwitchSelection", $"Twitch campaign '{bestTwitch.Name}' has an unresolved claim error; skipping to next candidate.");
+                            skippedOffline.Add(bestTwitch.Id);
+                            remainingTwitchCampaigns.Remove(bestTwitch);
+                            continue;
+                        }
+
                         string twitchUrl = await SelectTwitchStreamerForCampaign(bestTwitch);
                         if (token.IsCancellationRequested)
                             return;
@@ -1046,6 +1059,15 @@ namespace Core.Managers
 
                         if (token.IsCancellationRequested)
                             return;
+
+                        // See the matching Twitch check above - same reasoning, re-checked fresh every pass.
+                        if (bestKick.Rewards.Any(r => !string.IsNullOrEmpty(r.LastClaimError)))
+                        {
+                            AppLogger.Warn("KickSelection", $"Kick campaign '{bestKick.Name}' has an unresolved claim error; skipping to next candidate.");
+                            skippedOffline.Add(bestKick.Id);
+                            remainingKickCampaigns.Remove(bestKick);
+                            continue;
+                        }
 
                         string kickUrl = await SelectKickStreamerForCampaign(bestKick);
                         if (token.IsCancellationRequested)
