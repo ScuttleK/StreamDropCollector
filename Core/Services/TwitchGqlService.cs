@@ -463,7 +463,7 @@ namespace Core.Services
         /// <param name="ct">A cancellation token that can be used to cancel the operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result is <see langword="true"/> if the drop
         /// reward was successfully claimed; otherwise, <see langword="false"/>.</returns>
-        public async Task<bool> ClaimDropAsync(string campaignId, string rewardId, CancellationToken ct = default)
+        public async Task<(bool Success, string? Error)> ClaimDropAsync(string campaignId, string rewardId, CancellationToken ct = default)
         {
             AppLogger.Info("TwitchGql", $"ClaimDrop started. campaignId={campaignId}, rewardId={rewardId}");
             // RefreshHeadersAsync marshals its own WebView2 access to the UI thread internally now, so no
@@ -511,8 +511,10 @@ namespace Core.Services
 
             if (!response.IsSuccessStatusCode || jsonText.Contains("\"errors\""))
             {
-                AppLogger.Warn("TwitchGql", $"ClaimDrop failed. status={(int)response.StatusCode}, hasErrors={jsonText.Contains("\"errors\"")}");
-                return false;
+                string gqlError = JsonNode.Parse(jsonText)?[0]?["errors"]?[0]?["message"]?.GetValue<string>()
+                    ?? $"Twitch returned an error (status {(int)response.StatusCode}).";
+                AppLogger.Warn("TwitchGql", $"ClaimDrop failed. status={(int)response.StatusCode}, error={gqlError}");
+                return (false, gqlError);
             }
 
             response.EnsureSuccessStatusCode();
@@ -527,7 +529,9 @@ namespace Core.Services
 
             AppLogger.Info("TwitchGql", $"ClaimDrop completed. success={isConnected}");
 
-            return isConnected;
+            return isConnected
+                ? (true, null)
+                : (false, "Twitch reported this account isn't properly connected for this drop.");
         }
         /// <summary>
         /// Queries the Twitch Drops dashboard and returns the full dashboard data as a JSON object.

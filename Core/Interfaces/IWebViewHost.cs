@@ -127,9 +127,10 @@ namespace Core.Interfaces
         /// </summary>
         /// <param name="campaignId">The unique identifier of the Kick drop campaign from which to claim the reward. Cannot be null or empty.</param>
         /// <param name="rewardId">The unique identifier of the reward to claim within the specified campaign. Cannot be null or empty.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result is <see langword="true"/> if the reward
-        /// was successfully claimed; otherwise, <see langword="false"/>.</returns>
-        Task<bool> ClaimKickDropAsync(string campaignId, string rewardId);
+        /// <returns>A task that represents the asynchronous operation. Success is true if the reward was successfully
+        /// claimed; when false, Error carries a human-readable reason (from Kick's own API response where available)
+        /// suitable for showing directly in the UI next to the reward.</returns>
+        Task<(bool Success, string? Error)> ClaimKickDropAsync(string campaignId, string rewardId);
         /// <summary>
         /// Initiates an asynchronous operation to force a refresh of the underlying data or cache.
         /// </summary>

@@ -67,6 +67,13 @@ namespace Core.Managers
         private bool _lastKnownKickOnlineState;
         private bool _lastKnownTwitchOnlineState;
 
+        // Last claim-failure message per (campaignId, rewardId), UI-only state the platforms' own APIs know
+        // nothing about. Campaign refreshes rebuild ActiveCampaigns from fresh provider data (which always has
+        // LastClaimError = null), so this has to be re-stamped onto matching rewards after every rebuild -
+        // see ApplyRetainedClaimErrors. Only ever touched on the UI thread (inside the same
+        // Application.Current.Dispatcher.Invoke blocks that mutate ActiveCampaigns), so no lock is needed.
+        private readonly Dictionary<(string CampaignId, string RewardId), string> _rewardClaimErrors = new();
+
         // Timer for live ticking
         private readonly System.Timers.Timer _liveProgressTimer = new(1000);
         private System.Timers.Timer? _recheckTimer;
@@ -346,11 +353,11 @@ namespace Core.Managers
                 UISettingsManager.Instance.UpdateAvailableGameFilterOptions(sourceCampaigns);
 
                 // Materialize before iterating to avoid concurrent modification
-                List<DropsCampaign> filteredCampaigns = sourceCampaigns
+                List<DropsCampaign> filteredCampaigns = ApplyRetainedClaimErrors(sourceCampaigns
                     .Where(c => UISettingsManager.Instance.IsCampaignAllowedByWhitelist(c))
                     .Where(c => c.StartsAt <= DateTimeOffset.Now && c.EndsAt > DateTimeOffset.Now)
                     .OrderBy(x => x.Platform).ThenBy(x => x.GameName)
-                    .ToList();
+                    .ToList());
 
                 ActiveCampaigns.Clear();
                 // Safe: filtered is materialized list
@@ -584,11 +591,11 @@ namespace Core.Managers
                     .ToList();
 
                 // Materialize before iterating to avoid deferred execution issues
-                List<DropsCampaign> activeCampaignsList = filteredCampaigns
+                List<DropsCampaign> activeCampaignsList = ApplyRetainedClaimErrors(filteredCampaigns
                     .Where(c => c.StartsAt <= DateTimeOffset.Now && c.EndsAt > DateTimeOffset.Now)
                     .OrderBy(x => x.Platform)
                     .ThenBy(x => x.GameName)
-                    .ToList();
+                    .ToList());
 
                 ActiveCampaigns.Clear();
                 foreach (DropsCampaign? c in activeCampaignsList)
@@ -796,10 +803,11 @@ namespace Core.Managers
                             continue;
 
                         bool claimResult = false;
+                        string? claimError = null;
                         if (parentCampaign.Platform == Platform.Twitch && _twitchGqlService != null)
-                            claimResult = await _twitchGqlService.ClaimDropAsync(parentCampaign.Id, item.Id);
+                            (claimResult, claimError) = await _twitchGqlService.ClaimDropAsync(parentCampaign.Id, item.Id);
                         else if (parentCampaign.Platform == Platform.Kick && KickWebView != null)
-                            claimResult = await await Application.Current.Dispatcher.InvokeAsync(async () => await KickWebView.ClaimKickDropAsync(parentCampaign.Id, item.Id));
+                            (claimResult, claimError) = await await Application.Current.Dispatcher.InvokeAsync(async () => await KickWebView.ClaimKickDropAsync(parentCampaign.Id, item.Id));
 
                         if (claimResult)
                         {
@@ -819,6 +827,7 @@ namespace Core.Managers
                         else
                         {
                             nextCheckAt = DateTime.Now.AddMinutes(1);
+                            MarkRewardClaimErrorInActiveCampaigns(parentCampaign.Id, item.Id, claimError);
                             NotificationManager.ShowNotification("Drop Claim Failed", $"Failed to claim drop reward, re-trying in a minute: {item.Name}");
                         }
                     }
@@ -1231,6 +1240,8 @@ namespace Core.Managers
 
             Application.Current.Dispatcher.Invoke(() =>
             {
+                _rewardClaimErrors.Remove((campaignId, rewardId));
+
                 DropsCampaign? existingCampaign = ActiveCampaigns.FirstOrDefault(c => c.Id == campaignId);
                 if (existingCampaign == null)
                     return;
@@ -1249,7 +1260,8 @@ namespace Core.Managers
                         updatedRewards.Add(reward with
                         {
                             IsClaimed = true,
-                            ProgressMinutes = Math.Max(reward.ProgressMinutes, reward.RequiredMinutes)
+                            ProgressMinutes = Math.Max(reward.ProgressMinutes, reward.RequiredMinutes),
+                            LastClaimError = null
                         });
                     }
                     else
@@ -1282,6 +1294,69 @@ namespace Core.Managers
             }
 
             return updated;
+        }
+        /// <summary>
+        /// Records a failed claim attempt for immediate display next to the reward in the UI, and remembers it in
+        /// <see cref="_rewardClaimErrors"/> so it survives the next campaign refresh (which otherwise rebuilds
+        /// <see cref="ActiveCampaigns"/> from fresh provider data that has no notion of this UI-only state - see
+        /// <see cref="ApplyRetainedClaimErrors"/>). Mirrors <see cref="MarkRewardClaimedInActiveCampaigns"/>.
+        /// </summary>
+        /// <param name="campaignId">The identifier of the campaign the reward belongs to.</param>
+        /// <param name="rewardId">The identifier of the reward whose claim attempt failed.</param>
+        /// <param name="error">A human-readable failure reason to show in the UI.</param>
+        private void MarkRewardClaimErrorInActiveCampaigns(string campaignId, string rewardId, string? error)
+        {
+            string resolvedError = string.IsNullOrWhiteSpace(error) ? "Unknown error" : error;
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                _rewardClaimErrors[(campaignId, rewardId)] = resolvedError;
+
+                DropsCampaign? existingCampaign = ActiveCampaigns.FirstOrDefault(c => c.Id == campaignId);
+                if (existingCampaign == null)
+                    return;
+
+                int campaignIndex = ActiveCampaigns.IndexOf(existingCampaign);
+                if (campaignIndex < 0)
+                    return;
+
+                List<DropsReward> updatedRewards = new List<DropsReward>(existingCampaign.Rewards.Count);
+                foreach (DropsReward reward in existingCampaign.Rewards)
+                {
+                    updatedRewards.Add(reward.Id == rewardId
+                        ? reward with { LastClaimError = resolvedError }
+                        : reward);
+                }
+
+                ActiveCampaigns[campaignIndex] = existingCampaign with { Rewards = updatedRewards };
+            });
+        }
+        /// <summary>
+        /// Re-stamps any remembered claim-failure messages (<see cref="_rewardClaimErrors"/>) onto the matching
+        /// rewards in a freshly-fetched campaign list, since the platforms' own APIs have no concept of "last claim
+        /// error" - it would otherwise be silently lost every time <see cref="ActiveCampaigns"/> is rebuilt from
+        /// live provider data. Also prunes entries for rewards no longer present in the given campaigns, so the
+        /// dictionary doesn't grow unbounded over a long session. Must be called on the UI thread.
+        /// </summary>
+        private List<DropsCampaign> ApplyRetainedClaimErrors(List<DropsCampaign> campaigns)
+        {
+            if (_rewardClaimErrors.Count == 0)
+                return campaigns;
+
+            HashSet<(string, string)> currentKeys = [.. campaigns.SelectMany(c => c.Rewards.Select(r => (c.Id, r.Id)))];
+            foreach ((string CampaignId, string RewardId) staleKey in _rewardClaimErrors.Keys.Where(k => !currentKeys.Contains(k)).ToList())
+                _rewardClaimErrors.Remove(staleKey);
+
+            if (_rewardClaimErrors.Count == 0)
+                return campaigns;
+
+            return [.. campaigns.Select(campaign => campaign with
+            {
+                Rewards = [.. campaign.Rewards.Select(reward =>
+                    _rewardClaimErrors.TryGetValue((campaign.Id, reward.Id), out string? error)
+                        ? reward with { LastClaimError = error }
+                        : reward)]
+            })];
         }
         /// <summary>
         /// Updates the selection flags for active campaigns and their rewards to reflect the current campaign and

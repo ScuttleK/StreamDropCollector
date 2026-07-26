@@ -14,6 +14,9 @@ namespace Core.Models
     /// <param name="IsClaimed">true if the reward has been claimed; otherwise, false. Defaults to false.</param>
     /// <param name="DropInstanceId">The identifier of the specific drop instance associated with this reward, or null if not applicable.</param>
     /// <param name="IsCurrentReward">true if this reward is currently being progressed; otherwise, false. Defaults to false.</param>
+    /// <param name="LastClaimError">The error message from the most recent failed claim attempt, or null if the
+    /// last attempt succeeded (or none has been made). UI-only state, not sourced from the platform's own API -
+    /// see DropsInventoryManager's claim-error retention for how this survives campaign refreshes.</param>
     public record DropsReward(
         string Id,
         string Name,
@@ -22,7 +25,15 @@ namespace Core.Models
         int ProgressMinutes = 0,
         bool IsClaimed = false,
         string? DropInstanceId = null,
-        bool IsCurrentReward = false);
+        bool IsCurrentReward = false,
+        string? LastClaimError = null)
+    {
+        /// <summary>
+        /// "[ERROR] {message}", or "" when there's no error - never null, so XAML's usual
+        /// DataTrigger Value="" visibility pattern works without a null-handling converter.
+        /// </summary>
+        public string ClaimErrorDisplayText => string.IsNullOrEmpty(LastClaimError) ? "" : $"[ERROR] {LastClaimError}";
+    }
     /// <summary>
     /// Represents a campaign that offers in-game rewards through a drops program for a specific game and platform.
     /// </summary>

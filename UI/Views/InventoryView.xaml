@@ -277,6 +277,25 @@
                                                                          Maximum="{Binding RequiredMinutes}"
                                                                          Style="{StaticResource SlimProgressBarStyle}"
                                                                          Margin="0,7,0,0"/>
+
+                                                            <!-- Most recent failed claim attempt, if any -->
+                                                            <TextBlock Text="{Binding ClaimErrorDisplayText}"
+                                                                       Foreground="{DynamicResource DangerBrush}"
+                                                                       FontWeight="SemiBold"
+                                                                       FontSize="11"
+                                                                       TextWrapping="Wrap"
+                                                                       Margin="0,5,0,0">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding ClaimErrorDisplayText}" Value="">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
                                                         </StackPanel>
 
                                                         <!-- CLAIMED Badge -->

@@ -818,15 +818,15 @@ namespace UI.Views
         /// seconds to complete due to network or API response times.</remarks>
         /// <param name="campaignId">The unique identifier of the campaign for which the drop is being claimed.</param>
         /// <param name="rewardId">The unique identifier of the reward drop to claim within the specified campaign.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result is <see langword="true"/> if the drop was
-        /// successfully claimed; otherwise, <see langword="false"/>.</returns>
-        public async Task<bool> ClaimKickDropAsync(string campaignId, string rewardId)
+        /// <returns>A task that represents the asynchronous operation. Success is true if the drop was successfully
+        /// claimed; when false, Error carries a human-readable reason suitable for showing directly in the UI.</returns>
+        public async Task<(bool Success, string? Error)> ClaimKickDropAsync(string campaignId, string rewardId)
         {
             string? encodedToken = await GetCookieValueAsync("https://kick.com", "session_token");
             if (string.IsNullOrEmpty(encodedToken))
             {
                 AppLogger.Warn("KickClaim", "session_token cookie not found");
-                return false;
+                return (false, "Kick session not found - please reconnect your Kick account.");
             }
 
             string bearerToken = Uri.UnescapeDataString(encodedToken); // Decode %7C -> |
@@ -890,7 +890,7 @@ namespace UI.Views
                 if (rawResult == "{}" || string.IsNullOrWhiteSpace(rawResult))
                 {
                     AppLogger.Warn("KickClaim", "Claim timed out or no response");
-                    return false;
+                    return (false, "Claim timed out waiting for a response from Kick.");
                 }
 
                 using JsonDocument doc = JsonDocument.Parse(rawResult);
@@ -899,29 +899,28 @@ namespace UI.Views
                 if (success)
                 {
                     AppLogger.Debug("KickClaim", $"Successfully claimed Kick drop: {rewardId} (Campaign: {campaignId})");
-                }
-                else
-                {
-                    string? error =
-                        doc.RootElement.TryGetProperty("error", out JsonElement errElem) &&
-                        !string.IsNullOrWhiteSpace(errElem.GetString())
-                            ? errElem.GetString()
-                            : (
-                                doc.RootElement.TryGetProperty("data", out JsonElement data1) &&
-                                data1.TryGetProperty("data", out JsonElement data2) &&
-                                data2.TryGetProperty("details", out JsonElement details)
-                                    ? details.GetString()
-                                    : "Unknown error"
-                              );
-                    AppLogger.Warn("KickClaim", $"Kick claim failed: {error}");
+                    return (true, null);
                 }
 
-                return success;
+                string? error =
+                    doc.RootElement.TryGetProperty("error", out JsonElement errElem) &&
+                    !string.IsNullOrWhiteSpace(errElem.GetString())
+                        ? errElem.GetString()
+                        : (
+                            doc.RootElement.TryGetProperty("data", out JsonElement data1) &&
+                            data1.TryGetProperty("data", out JsonElement data2) &&
+                            data2.TryGetProperty("details", out JsonElement details)
+                                ? details.GetString()
+                                : "Unknown error"
+                          );
+                AppLogger.Warn("KickClaim", $"Kick claim failed: {error}");
+
+                return (false, error);
             }
             catch (Exception ex)
             {
                 AppLogger.Error("KickClaim", "Exception in ClaimKickDropAsync.", ex);
-                return false;
+                return (false, ex.Message);
             }
             finally
             {

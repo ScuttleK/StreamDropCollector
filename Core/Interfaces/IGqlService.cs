@@ -10,9 +10,9 @@ namespace Core.Interfaces
         /// <param name="campaignId">The unique identifier of the campaign from which to claim the drop. Cannot be null or empty.</param>
         /// <param name="rewardId">The unique identifier of the reward to claim. Cannot be null or empty.</param>
         /// <param name="ct">A cancellation token that can be used to cancel the asynchronous operation.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result is <see langword="true"/> if the drop was
-        /// successfully claimed; otherwise, <see langword="false"/>.</returns>
-        Task<bool> ClaimDropAsync(string campaignId, string rewardId, CancellationToken ct = default);
+        /// <returns>A task that represents the asynchronous operation. Success is true if the drop was successfully
+        /// claimed; when false, Error carries a human-readable reason suitable for showing directly in the UI.</returns>
+        Task<(bool Success, string? Error)> ClaimDropAsync(string campaignId, string rewardId, CancellationToken ct = default);
         /// <summary>
         /// Asynchronously retrieves the complete data set for the drops dashboard.
         /// </summary>
