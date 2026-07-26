@@ -1,13 +1,21 @@
 {
-  "version": "1.0.12",
-  "type": "Fix",
+  "version": "1.0.13",
+  "type": "Feature",
   "changelog": [
-    "Fixed a bug where updating the app in place could delete the uninstaller (unins000.exe), breaking the entry in Add/Remove Programs - if this already happened to you, just re-run the installer once to regenerate it",
-    "Actually fixed the Watch Streak toggle disagreeing with the Dashboard about Twitch being connected, by having it read Dashboard's own live status directly instead of a separate, timing-sensitive check",
-    "Fixed failed drop claims still not showing on the Dashboard's own queue (only Inventory had it)",
-    "Fixed error/info banner text getting cut off instead of wrapping onto a second line"
+    "Drops with an unresolved claim error are now automatically skipped in favor of the next campaign in queue, instead of getting stuck retrying the same failing claim - re-checked every time a campaign is selected, so it resumes normally once the error clears",
+    "The Watch Streak page's frequency selector, add-streamer box, and queue now gray out and disable entirely when \"Enable Watch Streak\" is off, not just the toggle itself"
   ],
   "historic_versions": [
+    {
+      "version": "1.0.12",
+      "type": "Fix",
+      "changelog": [
+        "Fixed a bug where updating the app in place could delete the uninstaller (unins000.exe), breaking the entry in Add/Remove Programs - if this already happened to you, just re-run the installer once to regenerate it",
+        "Actually fixed the Watch Streak toggle disagreeing with the Dashboard about Twitch being connected, by having it read Dashboard's own live status directly instead of a separate, timing-sensitive check",
+        "Fixed failed drop claims still not showing on the Dashboard's own queue (only Inventory had it)",
+        "Fixed error/info banner text getting cut off instead of wrapping onto a second line"
+      ]
+    },
     {
       "version": "1.0.11",
       "type": "Feature",
