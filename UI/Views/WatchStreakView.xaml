@@ -216,6 +216,24 @@
                                                    FontSize="15"
                                                    Foreground="{DynamicResource TextPrimaryBrush}"/>
 
+                                        <!-- Consecutive-day Watch Streak count, mirroring Twitch's own badge -->
+                                        <TextBlock Text="{Binding StreakCountText}"
+                                                   Foreground="{DynamicResource AccentBrush}"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="12"
+                                                   Margin="0,2,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding StreakCountText}" Value="">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
                                         <!-- Watching / waiting-for-first-check / live-but-ineligible / error -->
                                         <TextBlock Text="{Binding PrimaryStatusText}"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"

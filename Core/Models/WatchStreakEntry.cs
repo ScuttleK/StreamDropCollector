@@ -103,6 +103,23 @@ namespace Core.Models
             }
         }
 
+        private int _streakCount;
+        // Consecutive-day count, mirroring Twitch's own "Watch Streak: N" -- see
+        // WatchStreakManager.RecordStreakCompletion for how it's advanced/reset.
+        public int StreakCount
+        {
+            get => _streakCount;
+            set
+            {
+                if (_streakCount == value) return;
+                _streakCount = value;
+                OnPropertyChanged(nameof(StreakCount));
+                OnPropertyChanged(nameof(StreakCountText));
+            }
+        }
+
+        public string StreakCountText => StreakCount > 0 ? $"Watch Streak: {StreakCount}" : "";
+
         // Runtime-only, see IsCurrentlyLive's comment above.
         public string? CurrentSessionId { get; set; }
         public string? LastClaimedSessionId { get; set; }

@@ -751,8 +751,11 @@ namespace UI.Views
         /// triggering any navigation itself -- the caller is expected to already be on a page where the relevant
         /// GraphQL traffic happens naturally (e.g. a live channel page polling for channel points state), unlike
         /// <see cref="CaptureGqlRequestBodyContainingAsyncWithRetry"/> which forces its own navigation per attempt.
+        /// When <paramref name="isMatch"/> is supplied, a response merely containing the trigger text isn't enough
+        /// to stop listening -- e.g. ChannelPointsContext is polled repeatedly and most of those responses won't
+        /// carry an available claim yet, so without a predicate this would resolve on the first (claim-less) one.
         /// </summary>
-        public async Task<string?> CaptureGqlResponseBodyContainingAsync(string triggerText, int timeoutMs, CancellationToken ct = default)
+        public async Task<string?> CaptureGqlResponseBodyContainingAsync(string triggerText, int timeoutMs, Func<string, bool>? isMatch = null, CancellationToken ct = default)
         {
             TaskCompletionSource<string> tcs = new TaskCompletionSource<string>();
 
@@ -781,7 +784,7 @@ namespace UI.Views
                             JsonElement bodyJson = JsonDocument.Parse(bodyResult).RootElement;
                             string body = bodyJson.GetProperty("body").GetString() ?? "";
 
-                            if (body.Contains(triggerText))
+                            if (body.Contains(triggerText) && (isMatch == null || isMatch(body)))
                             {
                                 Dispatcher.Invoke(() =>
                                 {

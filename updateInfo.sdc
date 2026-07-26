@@ -1,13 +1,21 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "Fix",
   "changelog": [
-    "Fixed Watch Streak's completed line to clearly say \"Watch Streak has been completed today\" in green, instead of the harder-to-parse \"Streamer Watch Streak Completed\"",
-    "Fixed the completed timestamp showing a stale, incorrect date instead of the actual time the 5-minute watch finished",
-    "Fixed a bug where a Watch Streak that finished without a bonus becoming available was never actually recorded as completed, which could cause the same streamer to be needlessly re-watched over and over on the same day",
-    "Watch Streak now shows a dedicated green \"Completed\" status once today's watch is done, and skips further online/offline checks for that streamer (including a manual \"Refresh Now\") to save resources until it resets after local midnight"
+    "Fixed Watch Streak frequently recording \"no bonus that time\" even when Twitch's own UI showed the bonus being earned - the app was only checking the very first channel-points update after starting to watch (almost always before the bonus becomes available) and giving up instead of continuing to watch for it",
+    "Watch Streak now shows a \"Watch Streak: N\" counter under each queued streamer, tracking consecutive days watched the same way Twitch's own streak counter does"
   ],
   "historic_versions": [
+    {
+      "version": "1.0.5",
+      "type": "Fix",
+      "changelog": [
+        "Fixed Watch Streak's completed line to clearly say \"Watch Streak has been completed today\" in green, instead of the harder-to-parse \"Streamer Watch Streak Completed\"",
+        "Fixed the completed timestamp showing a stale, incorrect date instead of the actual time the 5-minute watch finished",
+        "Fixed a bug where a Watch Streak that finished without a bonus becoming available was never actually recorded as completed, which could cause the same streamer to be needlessly re-watched over and over on the same day",
+        "Watch Streak now shows a dedicated green \"Completed\" status once today's watch is done, and skips further online/offline checks for that streamer (including a manual \"Refresh Now\") to save resources until it resets after local midnight"
+      ]
+    },
     {
       "version": "1.0.4",
       "type": "Fix",

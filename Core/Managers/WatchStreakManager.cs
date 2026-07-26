@@ -269,7 +269,12 @@ namespace Core.Managers
             try
             {
                 string? body = await _webView!.CaptureGqlResponseBodyContainingAsync(
-                    "ChannelPointsContext", WatchDurationSeconds * 1000 + 30000);
+                    "ChannelPointsContext", WatchDurationSeconds * 1000 + 30000,
+                    isMatch: candidateBody =>
+                    {
+                        (string? candidateChannelId, string? candidateClaimId) = ParseAvailableClaim(candidateBody);
+                        return candidateChannelId != null && candidateClaimId != null;
+                    });
 
                 if (body == null)
                     return; // no bonus became available during the watch window
@@ -281,6 +286,7 @@ namespace Core.Managers
                 int? pointsEarned = await _gqlService!.ClaimCommunityPointsAsync(channelId, claimId);
                 if (pointsEarned.HasValue)
                 {
+                    RecordStreakCompletion(entry);
                     entry.LastPointsEarned = pointsEarned;
                     entry.LastClaimedAtUtc = DateTimeOffset.UtcNow;
                     entry.LastClaimedSessionId = entry.CurrentSessionId;
@@ -332,12 +338,27 @@ namespace Core.Managers
             // Streak is correctly marked done and isn't immediately re-watched on the next poll.
             if (entry.LastClaimedSessionId != entry.CurrentSessionId)
             {
+                RecordStreakCompletion(entry);
                 entry.LastPointsEarned = null;
                 entry.LastClaimedAtUtc = DateTimeOffset.UtcNow;
             }
 
             entry.Status = WatchStreakStatus.Idle;
             SaveQueueToDisk();
+        }
+
+        /// <summary>
+        /// Updates <see cref="WatchStreakEntry.StreakCount"/> for a watch that's about to be recorded as completed
+        /// -- call this before overwriting <see cref="WatchStreakEntry.LastClaimedAtUtc"/>, since it needs to
+        /// compare against the previous completion date. Mirrors Twitch's own day-based streak: completing on the
+        /// calendar day right after the last completion continues the streak, anything else (first-ever
+        /// completion, or a gap of a day or more) restarts it at 1.
+        /// </summary>
+        private static void RecordStreakCompletion(WatchStreakEntry entry)
+        {
+            DateTime? previousDate = entry.LastClaimedAtUtc?.ToLocalTime().Date;
+            DateTime today = DateTime.Now.Date;
+            entry.StreakCount = previousDate == today.AddDays(-1) ? entry.StreakCount + 1 : 1;
         }
 
         private void LoadQueueFromDisk()
@@ -364,6 +385,7 @@ namespace Core.Managers
                     {
                         LastClaimedAtUtc = cached.LastClaimedAtUtc,
                         LastPointsEarned = cached.LastPointsEarned,
+                        StreakCount = cached.StreakCount,
                         Status = cached.LastClaimedAtUtc.HasValue ? WatchStreakStatus.Idle : WatchStreakStatus.WaitingForLive,
                     };
                     Queue.Add(entry);
@@ -388,6 +410,7 @@ namespace Core.Managers
                             ChannelLogin = q.ChannelLogin,
                             LastClaimedAtUtc = q.LastClaimedAtUtc,
                             LastPointsEarned = q.LastPointsEarned,
+                            StreakCount = q.StreakCount,
                         })
                         .ToList(),
                 };
@@ -416,6 +439,7 @@ namespace Core.Managers
             public string ChannelLogin { get; set; } = string.Empty;
             public DateTimeOffset? LastClaimedAtUtc { get; set; }
             public int? LastPointsEarned { get; set; }
+            public int StreakCount { get; set; }
         }
     }
 }

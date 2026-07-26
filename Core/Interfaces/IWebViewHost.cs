@@ -113,9 +113,15 @@ namespace Core.Interfaces
         /// </summary>
         /// <param name="triggerText">Text to search for within the response body.</param>
         /// <param name="timeoutMs">Maximum time, in milliseconds, to wait before giving up.</param>
+        /// <param name="isMatch">Optional extra predicate a response must satisfy (in addition to containing
+        /// <paramref name="triggerText"/>) to be accepted. Without this, the very first response containing the
+        /// trigger text wins even if it's not the one the caller actually cares about -- e.g. a polled operation
+        /// like ChannelPointsContext fires repeatedly, and only some of those responses carry the payload the
+        /// caller is waiting for. When provided, non-matching responses are ignored and listening continues until
+        /// a satisfying one arrives or the timeout elapses.</param>
         /// <param name="ct">A cancellation token that can be used to cancel the operation.</param>
         /// <returns>The matching response body, or null if no matching response arrived within the timeout.</returns>
-        Task<string?> CaptureGqlResponseBodyContainingAsync(string triggerText, int timeoutMs, CancellationToken ct = default);
+        Task<string?> CaptureGqlResponseBodyContainingAsync(string triggerText, int timeoutMs, Func<string, bool>? isMatch = null, CancellationToken ct = default);
         /// <summary>
         /// Attempts to claim a reward from a Kick drop campaign using the specified campaign and reward identifiers.
         /// </summary>
