@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using Core.Models;
 using Core.Logging;
 using System.IO;
+using Core;
 
 namespace Core.Managers
 {
@@ -32,7 +33,13 @@ namespace Core.Managers
         /// the application to exit and restart.</remarks>
         public async Task DownloadUpdate()
         {
-            string basePath = Path.Combine(Environment.ExpandEnvironmentVariables("%APPDATA%"), "Stream Drop Collector");
+            // Update in place, wherever this install actually lives (installer -> %LocalAppData%\Programs\...,
+            // portable zip -> wherever the user extracted it) -- NOT a hardcoded %APPDATA% path. That used to
+            // relocate the running app into %APPDATA%\Stream Drop Collector on every first successful update,
+            // silently orphaning the WebView2 profile (login cookies) that lived next to the real install, which
+            // is exactly why accounts appeared logged out after updating.
+            string basePath = Path.GetDirectoryName(Utility.GetExePath())
+                ?? throw new InvalidOperationException("Could not determine the running application's directory.");
             string updatePath = Path.Combine(basePath, "Update");
             string zipPath = Path.Combine(basePath, "update.zip");
 

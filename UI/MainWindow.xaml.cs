@@ -122,8 +122,12 @@ namespace UI
             FileVersionInfo localVersionInfo = FileVersionInfo.GetVersionInfo(Utility.GetExePath());
             VersionString = localVersionInfo.FileVersion ?? "N/A";
 
-            string basePath = Path.Combine(Environment.ExpandEnvironmentVariables("%APPDATA%"), "Stream Drop Collector");
-            string updatePath = Path.Combine(basePath, "Update");
+            // Where THIS process is currently running from. For a normal launch or "--updated" (see below,
+            // launched from the real install dir), that's the actual install directory. Used as-is for the
+            // "--updated" cleanup below.
+            string runningFromDir = Path.GetDirectoryName(Utility.GetExePath())
+                ?? throw new InvalidOperationException("Could not determine the running application's directory.");
+            string updatePath = Path.Combine(runningFromDir, "Update");
 
             string[] args = Environment.GetCommandLineArgs();
 
@@ -132,10 +136,21 @@ namespace UI
                 switch (arg)
                 {
                     case "--updating":
+                        // UpdateManager.DownloadUpdate launches THIS process from <installDir>\Update\ (the
+                        // staged copy), so the install directory to actually update in place is one level up
+                        // from where this process itself is running - not runningFromDir/updatePath above,
+                        // which would otherwise (as it did before this fix) update the wrong folder and orphan
+                        // the real install's WebView2 profile (login cookies) and any local data sitting next
+                        // to it.
+                        string basePath = Directory.GetParent(runningFromDir)?.FullName
+                            ?? throw new InvalidOperationException("Could not determine the install directory to update.");
+                        string stagedUpdatePath = Path.Combine(basePath, "Update");
+
                         Thread.Sleep(3000); // Allow other instance(s) to close before finalizing the update
 
-                        // Delete all files and folders from the base path (%appdata% + \\Stream Drop Collector)
-                        // except update/runtime state and user data.
+                        // Delete all files and folders from the install directory except update/runtime state
+                        // and any local data that might be sitting there (defense-in-depth - normally lives in
+                        // %APPDATA% instead, untouched by this, but this list is cheap insurance either way).
                         string[] foldersToKeep =
                         [
                             "Update",
@@ -149,7 +164,8 @@ namespace UI
                             "sha_cache.tsgs",
                             "GqlHashCache.json",
                             "LastWatchedStreamers.json",
-                            "PinnedCampaignCache.json"
+                            "PinnedCampaignCache.json",
+                            "WatchStreakQueue.json"
                         ];
 
                         // Delete all files, except for the ones in filesToKeep
@@ -172,9 +188,9 @@ namespace UI
                         }
 
                         // Move update files to base path
-                        foreach (string file in Directory.GetFiles(updatePath, "*", SearchOption.AllDirectories))
+                        foreach (string file in Directory.GetFiles(stagedUpdatePath, "*", SearchOption.AllDirectories))
                         {
-                            string relativePath = Path.GetRelativePath(updatePath, file);
+                            string relativePath = Path.GetRelativePath(stagedUpdatePath, file);
                             string destinationPath = Path.Combine(basePath, relativePath);
                             string destinationDir = Path.GetDirectoryName(destinationPath)!;
 
