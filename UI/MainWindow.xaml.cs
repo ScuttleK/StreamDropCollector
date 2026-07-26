@@ -185,7 +185,7 @@ namespace UI
                         }
 
                         // Start the real, updated app
-                        Process.Start(Path.Combine(basePath, "Stream Drop Collector"), "--updated");
+                        Process.Start(Path.Combine(basePath, "Stream Drop Collector.exe"), "--updated");
                         Environment.Exit(0);
                         break;
                     case "--updated":

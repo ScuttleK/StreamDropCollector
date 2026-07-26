@@ -18,23 +18,32 @@ jobs:
               with:
                   dotnet-version: "10.0.x"
 
+            - name: Determine version
+              shell: pwsh
+              run: |
+                  # Single source of truth for the version stamped into the built binaries - derived
+                  # from the pushed tag so it can never drift out of sync with a hand-maintained csproj
+                  # field again (that's exactly what happened for v1.0.6: FileVersion was left at 1.0.5,
+                  # which made the self-updater think an update was still available after installing it).
+                  $version = "${{ github.ref_name }}" -replace '^v', ''
+                  echo "APP_VERSION=$version" >> $env:GITHUB_ENV
+
             - name: Publish (Self-Contained)
               run: |
                   Remove-Item -Recurse -Force publish/self-contained/ -ErrorAction SilentlyContinue
-                  dotnet publish UI/UI.csproj -c Release -r win-x64 -p:SelfContained=true -o publish/self-contained/
+                  dotnet publish UI/UI.csproj -c Release -r win-x64 -p:SelfContained=true "-p:Version=$env:APP_VERSION" "-p:FileVersion=$env:APP_VERSION" "-p:AssemblyVersion=$($env:APP_VERSION).0" -o publish/self-contained/
 
             - name: Publish (Framework-Dependent)
               run: |
                   Remove-Item -Recurse -Force publish/framework-dependent/ -ErrorAction SilentlyContinue
-                  dotnet publish UI/UI.csproj -c Release -r win-x64 -p:SelfContained=false -o publish/framework-dependent/
+                  dotnet publish UI/UI.csproj -c Release -r win-x64 -p:SelfContained=false "-p:Version=$env:APP_VERSION" "-p:FileVersion=$env:APP_VERSION" "-p:AssemblyVersion=$($env:APP_VERSION).0" -o publish/framework-dependent/
 
             - name: Build Installer (Inno Setup)
               shell: pwsh
               run: |
                   choco install innosetup -y --no-progress
-                  $version = "${{ github.ref_name }}" -replace '^v', ''
-                  & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "Installer\StreamDropCollector.iss" "/DMyAppVersion=$version"
-                  Copy-Item "publish\installer\StreamDropCollectorSetup-$version.exe" "StreamDropCollector-latest-setup.exe"
+                  & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "Installer\StreamDropCollector.iss" "/DMyAppVersion=$env:APP_VERSION"
+                  Copy-Item "publish\installer\StreamDropCollectorSetup-$env:APP_VERSION.exe" "StreamDropCollector-latest-setup.exe"
 
             - name: Zip (Self-Contained)
               run: Compress-Archive -Path publish/self-contained/* -DestinationPath StreamDropCollector-latest-self-contained.zip

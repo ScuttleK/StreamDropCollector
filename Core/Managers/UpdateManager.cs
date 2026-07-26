@@ -108,7 +108,7 @@ namespace Core.Managers
 
                 AppLogger.Info("UpdateManager", $"Update v{updateInfo.Version} downloaded and extracted successfully.");
 
-                Process.Start(Path.Combine(updatePath, "Stream Drop Collector"), "--updating");
+                Process.Start(Path.Combine(updatePath, "Stream Drop Collector.exe"), "--updating");
                 Environment.Exit(0);
             }
             catch (Exception ex)
