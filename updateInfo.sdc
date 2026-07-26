@@ -1,11 +1,18 @@
 {
-  "version": "1.0.7",
-  "type": "Fix",
+  "version": "1.0.8",
+  "type": "Feature",
   "changelog": [
-    "Fixed the v1.0.6 build's own internal version number being left at 1.0.5, which would have made \"Check for Updates\" think an update was still available even right after installing it - release builds now always get their embedded version stamped automatically from the git tag during the build, so this can't happen again",
-    "Fixed \"Update Now\" silently failing to do anything for anyone still on a pre-2026-07-25 build (v1.0.5 or earlier) - those builds point at the old repository name and an old per-version download link that no longer exists; if this is you, grab this version manually once from the links below and future in-app updates will work normally again"
+    "Drops that fail to auto-claim now show the actual failure reason in red right next to that reward (e.g. \"[ERROR] Unable to claim reward. Please check that your accounts are properly connected and all requirements are met.\") instead of only logging it silently, for both Twitch and Kick"
   ],
   "historic_versions": [
+    {
+      "version": "1.0.7",
+      "type": "Fix",
+      "changelog": [
+        "Fixed the v1.0.6 build's own internal version number being left at 1.0.5, which would have made \"Check for Updates\" think an update was still available even right after installing it - release builds now always get their embedded version stamped automatically from the git tag during the build, so this can't happen again",
+        "Fixed \"Update Now\" silently failing to do anything for anyone still on a pre-2026-07-25 build (v1.0.5 or earlier) - those builds point at the old repository name and an old per-version download link that no longer exists; if this is you, grab this version manually once from the links below and future in-app updates will work normally again"
+      ]
+    },
     {
       "version": "1.0.6",
       "type": "Fix",
