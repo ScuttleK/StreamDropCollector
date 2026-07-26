@@ -1,13 +1,23 @@
 {
-  "version": "1.0.11",
-  "type": "Feature",
+  "version": "1.0.12",
+  "type": "Fix",
   "changelog": [
-    "Fixed the Watch Streak enable toggle sometimes staying grayed out even when Twitch was actually connected on the Dashboard",
-    "Failed drop claims now show the error reason on the Dashboard too, not just Inventory",
-    "Error and info messages now use icon banners (red warning triangle, blue info) instead of \"[ERROR]\"/\"[INFO]\" text prefixes",
-    "The uninstaller now offers to fully wipe all saved settings, connected logins, and cached data, for a completely clean reinstall"
+    "Fixed a bug where updating the app in place could delete the uninstaller (unins000.exe), breaking the entry in Add/Remove Programs - if this already happened to you, just re-run the installer once to regenerate it",
+    "Actually fixed the Watch Streak toggle disagreeing with the Dashboard about Twitch being connected, by having it read Dashboard's own live status directly instead of a separate, timing-sensitive check",
+    "Fixed failed drop claims still not showing on the Dashboard's own queue (only Inventory had it)",
+    "Fixed error/info banner text getting cut off instead of wrapping onto a second line"
   ],
   "historic_versions": [
+    {
+      "version": "1.0.11",
+      "type": "Feature",
+      "changelog": [
+        "Fixed the Watch Streak enable toggle sometimes staying grayed out even when Twitch was actually connected on the Dashboard",
+        "Failed drop claims now show the error reason on the Dashboard too, not just Inventory",
+        "Error and info messages now use icon banners (red warning triangle, blue info) instead of \"[ERROR]\"/\"[INFO]\" text prefixes",
+        "The uninstaller now offers to fully wipe all saved settings, connected logins, and cached data, for a completely clean reinstall"
+      ]
+    },
     {
       "version": "1.0.10",
       "type": "Feature",
