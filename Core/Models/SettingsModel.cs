@@ -25,6 +25,7 @@ namespace Core.Models
         public bool TwitchGameFilterBlacklistMode { get; set; }
         public bool KickGameFilterBlacklistMode { get; set; }
         public bool PriorityQueueEnabled { get; set; }
+        public bool WatchStreakEnabled { get; set; }
         public List<string> PriorityQueueGames { get; set; } = new List<string>();
         public Dictionary<string, string> TwitchGameHistory { get; set; } = new Dictionary<string, string>();
         public Dictionary<string, string> KickGameHistory { get; set; } = new Dictionary<string, string>();

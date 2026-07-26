@@ -2,6 +2,7 @@ using Core.Managers;
 using Core.Models;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace UI.Views
 {
@@ -14,6 +15,11 @@ namespace UI.Views
         public static WatchStreakView Instance => _instance.Value;
 
         private readonly HiddenWebViewHost _webView = new();
+        private readonly DispatcherTimer _twitchGateTimer = new() { Interval = TimeSpan.FromSeconds(15) };
+
+        // Guards WatchStreakEnabledCheckBox_CheckedChanged while we set IsChecked from code (constructor,
+        // gate refresh) so that doesn't get mistaken for the user toggling it and re-save/re-trigger.
+        private bool _isSyncingCheckBoxFromSettings;
 
         private WatchStreakView()
         {
@@ -26,6 +32,47 @@ namespace UI.Views
             UpdateEmptyHintVisibility();
 
             SelectCurrentPollInterval();
+
+            SetCheckBoxChecked(UISettingsManager.Instance.WatchStreakEnabled);
+            _ = RefreshTwitchGateAsync();
+
+            _twitchGateTimer.Tick += async (s, e) => await RefreshTwitchGateAsync();
+            _twitchGateTimer.Start();
+        }
+
+        private void SetCheckBoxChecked(bool value)
+        {
+            _isSyncingCheckBoxFromSettings = true;
+            try
+            {
+                WatchStreakEnabledCheckBox.IsChecked = value;
+            }
+            finally
+            {
+                _isSyncingCheckBoxFromSettings = false;
+            }
+        }
+
+        /// <summary>
+        /// Re-checks whether Twitch is connected and updates the enable toggle's clickability and the
+        /// "Twitch needs to be connected first" hint accordingly. Doesn't force the toggle off if it's
+        /// already on and Twitch happens to disconnect later - it just becomes un-clickable (grayed out)
+        /// until reconnected, rather than silently discarding the user's choice.
+        /// </summary>
+        private async Task RefreshTwitchGateAsync()
+        {
+            bool isConnected = await WatchStreakManager.Instance.IsTwitchAccountConnectedAsync();
+
+            WatchStreakEnabledCheckBox.IsEnabled = isConnected;
+            TwitchRequiredHint.Visibility = isConnected ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void WatchStreakEnabledCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            if (_isSyncingCheckBoxFromSettings)
+                return;
+
+            UISettingsManager.Instance.WatchStreakEnabled = WatchStreakEnabledCheckBox.IsChecked == true;
         }
 
         private void SelectCurrentPollInterval()
@@ -56,9 +103,10 @@ namespace UI.Views
             }
         }
 
-        private void RefreshButton_Click(object sender, RoutedEventArgs e)
+        private async void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
             WatchStreakManager.Instance.RefreshNow();
+            await RefreshTwitchGateAsync();
         }
 
         private void UpdateEmptyHintVisibility()

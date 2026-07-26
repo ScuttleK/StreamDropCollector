@@ -50,6 +50,7 @@ namespace Core.Managers
         private bool _twitchGameFilterBlacklistMode;
         private bool _kickGameFilterBlacklistMode;
         private bool _priorityQueueEnabled;
+        private bool _watchStreakEnabled;
         // Every game slug/name ever seen per platform, persisted so the filter list doesn't shrink to only
         // whatever's currently active across app relaunches.
         private Dictionary<string, string> _twitchGameHistory = new(StringComparer.OrdinalIgnoreCase);
@@ -361,6 +362,18 @@ namespace Core.Managers
         }
 
         /// <summary>
+        /// Gets or sets whether Watch Streak's background polling/watching is allowed to run at all. Off by
+        /// default - WatchStreakManager checks this on every tick and skips starting anything new while it's
+        /// false (an already-in-progress watch is still allowed to finish rather than being abandoned mid-way).
+        /// The UI additionally only allows turning this on while Twitch is connected.
+        /// </summary>
+        public bool WatchStreakEnabled
+        {
+            get => _watchStreakEnabled;
+            set => SetField(ref _watchStreakEnabled, value);
+        }
+
+        /// <summary>
         /// Adds a game to the end of the Priority Queue. No-ops if the name is blank or already present
         /// (case-insensitive).
         /// </summary>
@@ -590,6 +603,7 @@ namespace Core.Managers
                     _twitchGameFilterBlacklistMode = settings.TwitchGameFilterBlacklistMode;
                     _kickGameFilterBlacklistMode = settings.KickGameFilterBlacklistMode;
                     PriorityQueueEnabled = settings.PriorityQueueEnabled;
+                    WatchStreakEnabled = settings.WatchStreakEnabled;
 
                     PriorityQueueGames.Clear();
                     foreach (string game in settings.PriorityQueueGames ?? [])
@@ -652,6 +666,7 @@ namespace Core.Managers
                     TwitchGameFilterBlacklistMode = _twitchGameFilterBlacklistMode,
                     KickGameFilterBlacklistMode = _kickGameFilterBlacklistMode,
                     PriorityQueueEnabled = PriorityQueueEnabled,
+                    WatchStreakEnabled = WatchStreakEnabled,
                     PriorityQueueGames = [.. PriorityQueueGames],
                     TwitchGameHistory = new Dictionary<string, string>(_twitchGameHistory),
                     KickGameHistory = new Dictionary<string, string>(_kickGameHistory)

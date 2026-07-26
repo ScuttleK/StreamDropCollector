@@ -112,6 +112,30 @@ namespace Core.Managers
             _gqlService = new TwitchGqlService(webView);
         }
 
+        /// <summary>
+        /// Checks whether a Twitch login session is currently present, for gating the UI's Watch Streak
+        /// enable toggle (the feature is pointless without Twitch connected, since the bonus it watches for
+        /// is Twitch-only). A lightweight cookie-presence check rather than a full page load/validation --
+        /// good enough for an enablement gate; TickAsync's own polling will surface any deeper auth problem.
+        /// </summary>
+        public async Task<bool> IsTwitchAccountConnectedAsync()
+        {
+            if (_webView == null)
+                return false;
+
+            try
+            {
+                await _webView.EnsureInitializedAsync();
+                string? token = await _webView.GetCookieValueAsync("https://twitch.tv", "auth-token");
+                return !string.IsNullOrEmpty(token);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("WatchStreak", $"Failed to check Twitch connection status: {ex.Message}");
+                return false;
+            }
+        }
+
         private static string? ExtractChannelLogin(string input)
         {
             input = input.Trim();
@@ -139,6 +163,8 @@ namespace Core.Managers
                 WatchStreakEntry? watching = Queue.FirstOrDefault(q => q.Status == WatchStreakStatus.Watching);
                 if (watching != null)
                 {
+                    // Let an already-in-progress watch finish naturally even if the feature gets turned off
+                    // mid-watch, rather than abandoning a bonus that's this close to landing.
                     if (watching.SecondsRemaining > 0)
                     {
                         watching.SecondsRemaining--;
@@ -149,6 +175,12 @@ namespace Core.Managers
                     }
                     return;
                 }
+
+                // Master switch, off by default - don't start anything new (no live-status polling, no
+                // watching) while disabled. Checked after the in-progress-watch branch above so toggling
+                // off never cuts short a watch that already started.
+                if (!UISettingsManager.Instance.WatchStreakEnabled)
+                    return;
 
                 if ((DateTime.UtcNow - _lastLivePollUtc).TotalSeconds < _pollIntervalSeconds)
                     return;

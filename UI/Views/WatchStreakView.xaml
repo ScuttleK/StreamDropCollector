@@ -63,10 +63,65 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- MODERN CHECKBOX - copied from SettingsView.xaml's proven working version rather than sharing
+             a resource dictionary, matching this codebase's existing per-view duplication convention. -->
+        <Style x:Key="ModernCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid Background="Transparent">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border x:Name="CheckBoxBorder"
+                                    Width="20" Height="20"
+                                    CornerRadius="6"
+                                    BorderThickness="2"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    Background="{DynamicResource CardBackgroundBrush}"
+                                    Margin="0,0,12,0"
+                                    VerticalAlignment="Center">
+                                <Path x:Name="CheckMark"
+                                      Data="M 4,10 L 8,14 L 16,6"
+                                      Stroke="{DynamicResource AccentBrush}"
+                                      StrokeThickness="3"
+                                      StrokeEndLineCap="Round"
+                                      StrokeStartLineCap="Round"
+                                      Opacity="0"
+                                      Stretch="Fill"
+                                      Width="12" Height="12"/>
+                            </Border>
+                            <ContentPresenter Grid.Column="1"
+                                              VerticalAlignment="Center"
+                                              TextBlock.Foreground="{TemplateBinding Foreground}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="CheckBoxBorder" Property="Background" Value="{DynamicResource SurfaceMutedBrush}"/>
+                                <Setter TargetName="CheckMark" Property="Opacity" Value="1"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -86,8 +141,24 @@
                        Margin="0,6,0,0"/>
         </StackPanel>
 
+        <!-- ENABLE TOGGLE - off by default, only clickable while Twitch is connected -->
+        <StackPanel Grid.Row="1" Margin="0,10,0,4">
+            <CheckBox x:Name="WatchStreakEnabledCheckBox"
+                      Style="{StaticResource ModernCheckBoxStyle}"
+                      Content="Enable Watch Streak"
+                      Checked="WatchStreakEnabledCheckBox_CheckedChanged"
+                      Unchecked="WatchStreakEnabledCheckBox_CheckedChanged"/>
+            <TextBlock x:Name="TwitchRequiredHint"
+                       Text="[INFO] Twitch needs to be connected first"
+                       Foreground="Gold"
+                       FontWeight="SemiBold"
+                       FontSize="12"
+                       Margin="32,6,0,0"
+                       Visibility="Collapsed"/>
+        </StackPanel>
+
         <!-- AVAILABILITY CHECK FREQUENCY + REFRESH -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,4,0,4" VerticalAlignment="Center">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,4" VerticalAlignment="Center">
             <TextBlock Text="Availability Check Frequency:"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        VerticalAlignment="Center"
@@ -115,7 +186,7 @@
         </StackPanel>
 
         <!-- ADD STREAMER -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="3"
                 Background="{DynamicResource CardBackgroundBrush}"
                 CornerRadius="12" Padding="20" Margin="0,12,0,20"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
@@ -165,7 +236,7 @@
         </Border>
 
         <!-- QUEUE -->
-        <Border Grid.Row="3"
+        <Border Grid.Row="4"
                 Background="{DynamicResource CardBackgroundBrush}"
                 CornerRadius="12" Padding="20"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
