@@ -1,11 +1,18 @@
 {
-  "version": "1.0.9",
-  "type": "Fix",
+  "version": "1.0.10",
+  "type": "Feature",
   "changelog": [
-    "Fixed a bug where updating the app moved it into a different folder behind the scenes instead of updating in place, which disconnected your Twitch/Kick logins (and wiped the Watch Streak queue) after the update finished - if this already happened to you, your old login session is still intact wherever the app was originally installed (check your Start Menu/Desktop shortcut)",
-    "The Watch Streak queue is now also explicitly protected during an update, as extra insurance"
+    "Added an \"Enable Watch Streak\" toggle, off by default - the feature now stays fully inactive until you turn it on, and the toggle is grayed out with an info hint until Twitch is connected"
   ],
   "historic_versions": [
+    {
+      "version": "1.0.9",
+      "type": "Fix",
+      "changelog": [
+        "Fixed a bug where updating the app moved it into a different folder behind the scenes instead of updating in place, which disconnected your Twitch/Kick logins (and wiped the Watch Streak queue) after the update finished - if this already happened to you, your old login session is still intact wherever the app was originally installed (check your Start Menu/Desktop shortcut)",
+        "The Watch Streak queue is now also explicitly protected during an update, as extra insurance"
+      ]
+    },
     {
       "version": "1.0.8",
       "type": "Feature",
