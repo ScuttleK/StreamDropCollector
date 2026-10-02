@@ -1,14 +1,22 @@
 {
-  "version": "1.0.14",
+  "version": "1.0.15",
   "type": "Fix",
   "changelog": [
+    "Fixed the miner going straight back to a Twitch campaign it had just claimed instead of moving on to the next one",
+    "Fixed claimed Twitch drops reappearing as unclaimed at 0 minutes after a refresh (the Dashboard kept showing them as active and the Completed list stayed empty) - claimed drops now stay claimed and move to Completed"
+  ],
+  "historic_versions": [
+    {
+      "version": "1.0.14",
+      "type": "Fix",
+      "changelog": [
     "Fixed the miner getting stuck on \"Evaluating\" and never farming: Kick changed its page layout so every Kick streamer looked like the wrong game, and each check crawled through dozens of channel pages while Twitch progress froze - Kick streams are now checked through Kick's own channel API in under a second",
     "The miner no longer reloads a stream that's already playing when it re-checks its picks, so partially watched minutes aren't thrown away",
     "A drop claim that keeps failing (e.g. a Kick reward that needs a linked account) is now retried every 15 minutes instead of restarting both streams every minute",
     "The Dashboard's Kick online/offline indicators no longer get rate-limited by Kick",
     "Security: your Kick session token is only ever used on kick.com pages, campaign names and IDs are safely escaped before use in page scripts, and the updater refuses to install an update that can't be verified with a published SHA256 hash"
-  ],
-  "historic_versions": [
+      ]
+    },
     {
       "version": "1.0.13",
       "type": "Feature",
