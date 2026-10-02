@@ -820,6 +820,12 @@ namespace UI.Views
         /// <param name="rewardId">The unique identifier of the reward drop to claim within the specified campaign.</param>
         /// <returns>A task that represents the asynchronous operation. Success is true if the drop was successfully
         /// claimed; when false, Error carries a human-readable reason suitable for showing directly in the UI.</returns>
+        private static bool IsKickOrigin(string? url) =>
+            Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) &&
+            uri.Scheme == Uri.UriSchemeHttps &&
+            (uri.Host.Equals("kick.com", StringComparison.OrdinalIgnoreCase) ||
+             uri.Host.EndsWith(".kick.com", StringComparison.OrdinalIgnoreCase));
+
         public async Task<(bool Success, string? Error)> ClaimKickDropAsync(string campaignId, string rewardId)
         {
             string? encodedToken = await GetCookieValueAsync("https://kick.com", "session_token");
@@ -831,11 +837,22 @@ namespace UI.Views
 
             string bearerToken = Uri.UnescapeDataString(encodedToken); // Decode %7C -> |
 
+            // The script below runs inside whatever page this WebView is showing and carries the Kick session
+            // token, so only ever run it on Kick's own origin - never hand the token to another site's page.
+            if (!IsKickOrigin(WebView.CoreWebView2.Source))
+            {
+                AppLogger.Warn("KickClaim", "Kick WebView is not on kick.com; refusing to run the claim request there.");
+                return (false, "Kick page not loaded - will retry.");
+            }
+
             TaskCompletionSource<string> tcs = new TaskCompletionSource<string>();
 
             // One-time handler for the result
             void MessageReceivedHandler(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
             {
+                if (!IsKickOrigin(e.Source))
+                    return;
+
                 string message = e.TryGetWebMessageAsString() ?? "";
                 tcs.TrySetResult(message);
                 WebView.CoreWebView2.WebMessageReceived -= MessageReceivedHandler;
@@ -854,11 +871,11 @@ namespace UI.Views
                                 headers: {{
                                     'Content-Type': 'application/json',
                                     'Accept': 'application/json',
-                                    'Authorization': 'Bearer {bearerToken}'
+                                    'Authorization': 'Bearer ' + {JsonSerializer.Serialize(bearerToken)}
                                 }},
                                 body: JSON.stringify({{
-                                    campaign_id: '{campaignId}',
-                                    reward_id: '{rewardId}'
+                                    campaign_id: {JsonSerializer.Serialize(campaignId)},
+                                    reward_id: {JsonSerializer.Serialize(rewardId)}
                                 }})
                             }});
 

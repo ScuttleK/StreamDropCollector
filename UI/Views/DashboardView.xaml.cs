@@ -968,14 +968,37 @@ namespace UI.Views
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36");
             http.DefaultRequestHeaders.Add("Accept", "application/json");
 
+            // Paced, and abandoned on the first 429: firing one request per streamer back to back (70+ in a few
+            // seconds) got the whole client rate-limited by Kick, which the miner's own live/category checks share.
+            bool rateLimited = false;
             foreach (var item in kickItems)
             {
+                if (rateLimited) break;
                 foreach (var streamer in item.StreamerStatuses.Where(s => !s.IsWatching).ToList())
                 {
+                    if (rateLimited)
+                    {
+                        await Dispatcher.InvokeAsync(() => streamer.IsOnline = null);
+                        continue;
+                    }
+
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(streamer.Name ?? string.Empty, "^[A-Za-z0-9_-]{1,64}$"))
+                        continue;
+
                     try
                     {
-                        var json = await http.GetStringAsync(
+                        await Task.Delay(750);
+                        using var response = await http.GetAsync(
                             $"https://kick.com/api/v2/channels/{streamer.Name}");
+                        if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                        {
+                            rateLimited = true;
+                            AppLogger.Warn("Dashboard", "Kick rate-limited the streamer live-status probe; skipping the rest of this pass.");
+                            await Dispatcher.InvokeAsync(() => streamer.IsOnline = null);
+                            continue;
+                        }
+                        response.EnsureSuccessStatusCode();
+                        var json = await response.Content.ReadAsStringAsync();
                         using var doc = System.Text.Json.JsonDocument.Parse(json);
                         bool isLive = doc.RootElement.TryGetProperty("livestream", out var ls)
                                       && ls.ValueKind != System.Text.Json.JsonValueKind.Null;

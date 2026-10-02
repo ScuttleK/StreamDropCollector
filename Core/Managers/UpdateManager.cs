@@ -90,7 +90,14 @@ namespace Core.Managers
                 // protects the transport, but this adds defense-in-depth against a compromised release asset or a
                 // corrupted download, and it's checked against a hash published alongside the version manifest
                 // rather than trusting the download alone.
-                if (!string.IsNullOrWhiteSpace(updateInfo.Sha256))
+                // Fail closed: without a published hash there is nothing to check the download against, so don't
+                // extract and run it (previously this only logged a warning and installed the package anyway).
+                if (string.IsNullOrWhiteSpace(updateInfo.Sha256))
+                {
+                    File.Delete(zipPath);
+                    throw new InvalidOperationException($"No sha256 is published for v{updateInfo.Version} yet, so the download can't be verified. Aborting update.");
+                }
+
                 {
                     string actualHash;
                     await using (FileStream verifyStream = File.OpenRead(zipPath))
@@ -103,10 +110,6 @@ namespace Core.Managers
                     }
 
                     AppLogger.Info("UpdateManager", "Update package passed SHA256 integrity check.");
-                }
-                else
-                {
-                    AppLogger.Warn("UpdateManager", "No sha256 published for this version; skipping integrity check.");
                 }
 
                 Directory.CreateDirectory(updatePath);

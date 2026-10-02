@@ -96,6 +96,12 @@ namespace Core.Managers
         // Application.Current.Dispatcher.Invoke blocks that mutate ActiveCampaigns), so no lock is needed.
         private readonly Dictionary<(string CampaignId, string RewardId), string> _rewardClaimErrors = new();
 
+        // When each reward's auto-claim last failed. A claim that keeps failing (e.g. Kick's "accounts not
+        // connected" error) used to be retried on every pass with a 1-minute recheck, so the miner re-navigated
+        // both streams every minute forever and never sat on a stream long enough to earn progress.
+        private readonly Dictionary<(string CampaignId, string RewardId), DateTime> _rewardClaimFailedAtUtc = new();
+        private static readonly TimeSpan FailedClaimRetryInterval = TimeSpan.FromMinutes(15);
+
         // Timer for live ticking
         private readonly System.Timers.Timer _liveProgressTimer = new(1000);
         private System.Timers.Timer? _recheckTimer;
@@ -824,6 +830,11 @@ namespace Core.Managers
                         if (parentCampaign == null)
                             continue;
 
+                        (string, string) claimKey = (parentCampaign.Id, item.Id);
+                        bool failedBefore = _rewardClaimFailedAtUtc.TryGetValue(claimKey, out DateTime lastFailedAtUtc);
+                        if (failedBefore && DateTime.UtcNow - lastFailedAtUtc < FailedClaimRetryInterval)
+                            continue;
+
                         bool claimResult = false;
                         string? claimError = null;
                         if (parentCampaign.Platform == Platform.Twitch && _twitchGqlService != null)
@@ -833,6 +844,7 @@ namespace Core.Managers
 
                         if (claimResult)
                         {
+                            _rewardClaimFailedAtUtc.Remove(claimKey);
                             bool inventoryUpdated = MarkRewardClaimedInActiveCampaigns(parentCampaign.Id, item.Id);
                             if (!inventoryUpdated)
                             {
@@ -848,9 +860,16 @@ namespace Core.Managers
                         }
                         else
                         {
-                            nextCheckAt = DateTime.Now.AddMinutes(1);
+                            // First failure retries quickly (often transient); repeat failures back off so a claim
+                            // that can't succeed doesn't keep yanking both streams into re-evaluation every minute.
+                            TimeSpan retryIn = failedBefore ? FailedClaimRetryInterval : TimeSpan.FromMinutes(1);
+                            _rewardClaimFailedAtUtc[claimKey] = failedBefore ? DateTime.UtcNow : DateTime.UtcNow - FailedClaimRetryInterval;
+                            DateTime retryAt = DateTime.Now.Add(retryIn);
+                            if (retryAt < nextCheckAt)
+                                nextCheckAt = retryAt;
                             MarkRewardClaimErrorInActiveCampaigns(parentCampaign.Id, item.Id, claimError);
-                            NotificationManager.ShowNotification("Drop Claim Failed", $"Failed to claim drop reward, re-trying in a minute: {item.Name}");
+                            if (!failedBefore)
+                                NotificationManager.ShowNotification("Drop Claim Failed", $"Failed to claim drop reward, re-trying in a minute: {item.Name}");
                         }
                     }
                 }
@@ -931,12 +950,21 @@ namespace Core.Managers
                             continue;
                         }
 
-                        await await Application.Current.Dispatcher.InvokeAsync(async () => await TwitchWebView!.NavigateAsync(twitchUrl));
-                        await Task.Delay(1500);
-                        await DismissTwitchMatureContentGateAsync();
-                        await SetTwitchStreamToLowestQualityAsync();
-                        await await Application.Current.Dispatcher.InvokeAsync(async () => await TwitchWebView!.ForceRefreshAsync());
-                        await Task.Delay(5000);
+                        if (bestTwitch.Id == _currentTwitchCampaign?.Id && await IsWebViewOnChannelAsync(TwitchWebView!, twitchUrl))
+                        {
+                            // Already playing this stream for this campaign - reloading would only throw away the
+                            // partially watched minute.
+                            AppLogger.Info("TwitchSelection", $"Already watching '{twitchUrl}' for campaign '{bestTwitch.Name}'; keeping the player running.");
+                        }
+                        else
+                        {
+                            await await Application.Current.Dispatcher.InvokeAsync(async () => await TwitchWebView!.NavigateAsync(twitchUrl));
+                            await Task.Delay(1500);
+                            await DismissTwitchMatureContentGateAsync();
+                            await SetTwitchStreamToLowestQualityAsync();
+                            await await Application.Current.Dispatcher.InvokeAsync(async () => await TwitchWebView!.ForceRefreshAsync());
+                            await Task.Delay(5000);
+                        }
 
                         _currentTwitchCampaign = bestTwitch;
 
@@ -1081,16 +1109,22 @@ namespace Core.Managers
                             continue;
                         }
 
-                        await await Application.Current.Dispatcher.InvokeAsync(async () => await KickWebView!.NavigateAsync(kickUrl));
-                        await Task.Delay(1500);
-                        await DismissKickMatureContentGateAsync();
-                        await SetKickStreamToLowestQualityAsync();
-                        await await Application.Current.Dispatcher.InvokeAsync(async () => await KickWebView!.ForceRefreshAsync());
-                        await Task.Delay(5000);
+                        if (bestKick.Id == _currentKickCampaign?.Id && await IsWebViewOnChannelAsync(KickWebView!, kickUrl))
+                        {
+                            AppLogger.Info("KickSelection", $"Already watching '{kickUrl}' for campaign '{bestKick.Name}'; keeping the player running.");
+                        }
+                        else
+                        {
+                            await await Application.Current.Dispatcher.InvokeAsync(async () => await KickWebView!.NavigateAsync(kickUrl));
+                            await Task.Delay(1500);
+                            await DismissKickMatureContentGateAsync();
+                            await SetKickStreamToLowestQualityAsync();
+                            await await Application.Current.Dispatcher.InvokeAsync(async () => await KickWebView!.ForceRefreshAsync());
+                            await Task.Delay(5000);
+                        }
 
                         _currentKickCampaign = bestKick;
-                        bool kickOnline = await IsKickStreamOnline();
-                        bool kickCorrectCategory = await IsKickStreamCategoryCorrect();
+                        (bool kickOnline, bool kickCorrectCategory) = await GetKickStreamEligibilityAsync(kickUrl, bestKick.Slug);
 
                         if (!kickOnline || !kickCorrectCategory)
                         {
@@ -1500,8 +1534,10 @@ namespace Core.Managers
                         }
                     }
                     bool twitchShowingAd = _currentTwitchCampaign != null && await IsTwitchShowingAd();
-                    bool kickOnline = _currentKickCampaign != null && await IsKickStreamOnline();
-                    bool kickCorrectCategory = _currentKickCampaign != null && await IsKickStreamCategoryCorrect();
+                    bool kickOnline = false;
+                    bool kickCorrectCategory = false;
+                    if (_currentKickCampaign != null)
+                        (kickOnline, kickCorrectCategory) = await GetKickStreamEligibilityAsync(_currentKickStreamerUrl, _currentKickCampaign.Slug);
 
                     AppLogger.Debug("HealthCheck", $"Twitch: {(twitchOnline ? "ONLINE" : "OFFLINE")} | Kick: {(kickOnline ? "ONLINE" : "OFFLINE")}");
                     AppLogger.Debug("HealthCheck", $"Twitch category correct: {twitchCorrectCategory} | Kick category correct: {kickCorrectCategory} | Twitch showing ad: {twitchShowingAd}");
@@ -1904,21 +1940,39 @@ namespace Core.Managers
         /// of the current Kick campaign. Returns <see langword="false"/> if the web view is not initialized.</remarks>
         /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if the
         /// Kick stream category matches the current campaign slug; otherwise, <see langword="false"/>.</returns>
+        // Kick has renamed the category link's CSS class before (text-primary-base -> text-brand-bg-default), so
+        // match on the link target instead of styling and return every category href on the page.
+        private const string KickCategoryHrefsJs = @"
+                (() => {
+                    const links = Array.from(document.querySelectorAll('a[href*=""/category/""]'));
+                    return links
+                        .map(link => link?.href?.trim())
+                        .filter(Boolean)
+                        .join('|');
+                })();
+                ";
+
+        /// <summary>
+        /// Returns whether the given Kick channel is live and in the campaign's category, preferring Kick's channel
+        /// API and falling back to scraping the currently loaded page when the API is unavailable.
+        /// </summary>
+        private async Task<(bool Online, bool CategoryOk)> GetKickStreamEligibilityAsync(string? channelUrl, string? campaignSlug)
+        {
+            (bool Live, bool CategoryOk)? api = await IsKickStreamEligibleViaApiAsync(channelUrl, campaignSlug);
+            if (api.HasValue)
+                return api.Value;
+
+            return (await IsKickStreamOnline(), await IsKickStreamCategoryCorrect());
+        }
+
         private async Task<bool> IsKickStreamCategoryCorrect()
         {
             if (KickWebView == null)
                 return false;
 
-            string js = @"
-                (() => {
-                    const categoryElement = document.querySelector("".text-primary-base"");
-                    return categoryElement ? categoryElement.href.trim() : '';
-                })();
-                ";
-
             try
             {
-                string rawResult = await await Application.Current.Dispatcher.InvokeAsync(async () => await KickWebView.ExecuteScriptAsync(js));
+                string rawResult = await await Application.Current.Dispatcher.InvokeAsync(async () => await KickWebView.ExecuteScriptAsync(KickCategoryHrefsJs));
                 bool isCorrect = KickCategoryHrefMatchesCampaign(rawResult, _currentKickCampaign?.Slug);
 
                 AppLogger.Debug("KickSelection", $"[DropsInventoryManager] Kick stream category correct status: {isCorrect}");
@@ -2115,12 +2169,7 @@ namespace Core.Managers
             string streamerUrl = string.Empty;
             TryGetLastStreamerUrl(Platform.Kick, campaign.Slug, out string? rememberedKickUrl);
 
-            string getStreamerCategoryJs = @"
-                (() => {
-                    const categoryElement = document.querySelector("".text-primary-base"");
-                    return categoryElement ? categoryElement.href.trim() : '';
-                })();
-            ";
+            string getStreamerCategoryJs = KickCategoryHrefsJs;
             string getFirstStreamerFromDirectoryJs;
 
             if (string.IsNullOrEmpty(campaign.Slug))
@@ -2140,7 +2189,7 @@ namespace Core.Managers
                         if (titles.length === 0) return '';
                         let targetSection = null;
                         for (const h3 of titles) {{
-                            if (h3.innerText.includes('{campaign.Name.Replace("'", "\\'")}')) {{
+                            if (h3.innerText.includes({JsonSerializer.Serialize(campaign.Name)})) {{
                                 targetSection = h3.closest('section') || h3.parentElement.parentElement.parentElement.parentElement;
                                 break;
                             }}
@@ -2166,8 +2215,25 @@ namespace Core.Managers
                         .Distinct(StringComparer.OrdinalIgnoreCase);
                 }
 
+                int offlineOrWrongCategory = 0;
                 foreach (string connectUrl in orderedConnectUrls)
                 {
+                    // Ask Kick's channel API first - it answers in well under a second, where loading each channel
+                    // page took ~6s and a campaign with dozens of streamers kept the miner evaluating for minutes.
+                    (bool Live, bool CategoryOk)? api = await IsKickStreamEligibleViaApiAsync(connectUrl, campaign.Slug);
+                    if (api.HasValue)
+                    {
+                        if (api.Value.Live && api.Value.CategoryOk)
+                        {
+                            streamerUrl = connectUrl;
+                            AppLogger.Info("KickSelection", $"Kick streamer accepted for campaign '{campaign.Name}' via channel API: {connectUrl}");
+                            break;
+                        }
+
+                        offlineOrWrongCategory++;
+                        continue;
+                    }
+
                     await await Application.Current.Dispatcher.InvokeAsync(async () => await KickWebView!.NavigateAsync(connectUrl));
                     await await Application.Current.Dispatcher.InvokeAsync(async () => await KickWebView!.WaitForNetworkIdleAsync(5000, 500));
 
@@ -2188,6 +2254,9 @@ namespace Core.Managers
 
                     AppLogger.Warn("KickSelection", $"Kick URL category mismatch for campaign '{campaign.Name}'. url='{connectUrl}', category='{categoryResult.Trim('"')}', slug='{campaign.Slug}'");
                 }
+
+                if (offlineOrWrongCategory > 0 && string.IsNullOrWhiteSpace(streamerUrl))
+                    AppLogger.Info("KickSelection", $"{offlineOrWrongCategory} Kick streamer(s) for campaign '{campaign.Name}' are offline or not in '{campaign.Slug}' (channel API).");
             }
             else
             {
@@ -2196,15 +2265,27 @@ namespace Core.Managers
                 {
                     AppLogger.Info("KickSelection", $"Trying remembered Kick streamer for general campaign '{campaign.Name}': {rememberedKickUrl}");
 
-                    await await Application.Current.Dispatcher.InvokeAsync(async () =>
-                        await KickWebView!.NavigateAsync(rememberedKickUrl));
+                    (bool Live, bool CategoryOk)? api = await IsKickStreamEligibleViaApiAsync(rememberedKickUrl, campaign.Slug);
+                    string categoryResult;
+                    bool rememberedMatches;
+                    if (api.HasValue)
+                    {
+                        rememberedMatches = api.Value.Live && api.Value.CategoryOk;
+                        categoryResult = $"api: live={api.Value.Live}, categoryOk={api.Value.CategoryOk}";
+                    }
+                    else
+                    {
+                        await await Application.Current.Dispatcher.InvokeAsync(async () =>
+                            await KickWebView!.NavigateAsync(rememberedKickUrl));
 
-                    await Task.Delay(1500);  // Consider → WaitForNetworkIdleAsync(5000, 500) for better sync
+                        await await Application.Current.Dispatcher.InvokeAsync(async () => await KickWebView!.WaitForNetworkIdleAsync(5000, 500));
 
-                    string categoryResult = await await Application.Current.Dispatcher.InvokeAsync(async () =>
-                        await KickWebView!.ExecuteScriptAsync(getStreamerCategoryJs));
+                        categoryResult = await await Application.Current.Dispatcher.InvokeAsync(async () =>
+                            await KickWebView!.ExecuteScriptAsync(getStreamerCategoryJs));
+                        rememberedMatches = KickCategoryHrefMatchesCampaign(categoryResult, campaign.Slug);
+                    }
 
-                    if (KickCategoryHrefMatchesCampaign(categoryResult, campaign.Slug))
+                    if (rememberedMatches)
                     {
                         AppLogger.Info("KickSelection", $"Remembered streamer still matches category for general campaign '{campaign.Name}': {rememberedKickUrl}");
                         streamerUrl = rememberedKickUrl!;
@@ -2302,8 +2383,9 @@ namespace Core.Managers
 
                 // If there are many ConnectUrls, batch-check live status via GQL
                 // instead of navigating the WebView one by one
-                const int webViewThreshold = 10;
-                if (campaign.ConnectUrls.Count > webViewThreshold)
+                // (now for every list size: the per-URL WebView path below reloads the player on each
+                // re-evaluation even when it lands on the stream already being watched)
+                if (_twitchGqlService != null)
                 {
                     AppLogger.Info("TwitchSelection", $"Campaign '{campaign.Name}' has {campaign.ConnectUrls.Count} ConnectUrls - using batch GQL live check.");
 
@@ -2323,7 +2405,8 @@ namespace Core.Managers
                         // QueryLiveChannelsBySlug already guarantees each login is live AND in the
                         // correct category (server-side), so accept the first one directly instead of
                         // navigating and re-checking via fragile DOM scraping (which rejected valid streamers).
-                        string acceptedLogin = liveLogins[0];
+                        string rememberedLogin = string.IsNullOrWhiteSpace(rememberedTwitchUrl) ? string.Empty : GetStreamerNameFromUrl(rememberedTwitchUrl);
+                        string acceptedLogin = liveLogins.FirstOrDefault(l => string.Equals(l, rememberedLogin, StringComparison.OrdinalIgnoreCase)) ?? liveLogins[0];
                         streamerUrl = $"https://www.twitch.tv/{acceptedLogin}";
                         AppLogger.Info("TwitchSelection", $"Batch GQL streamer accepted for campaign '{campaign.Name}': {streamerUrl} (live+category confirmed via GQL; {liveLogins.Count} candidates).");
                     }
@@ -2452,6 +2535,99 @@ namespace Core.Managers
             string expectedCategoryPath = $"/category/{campaignSlug}";
             string hrefs = rawCategoryHrefs.Trim().Trim('"');
             return hrefs.Contains(expectedCategoryPath, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Returns whether the given WebView is currently showing the given channel page (same host and first path
+        /// segment), so a re-evaluation that picks the same stream can leave the running player alone.
+        /// </summary>
+        private async Task<bool> IsWebViewOnChannelAsync(IWebViewHost host, string channelUrl)
+        {
+            try
+            {
+                string raw = await await Application.Current.Dispatcher.InvokeAsync(async () => await host.ExecuteScriptAsync("location.href"));
+                string current = raw?.Trim().Trim('"') ?? string.Empty;
+                if (!Uri.TryCreate(current, UriKind.Absolute, out Uri? currentUri) || !Uri.TryCreate(channelUrl, UriKind.Absolute, out Uri? targetUri))
+                    return false;
+
+                return string.Equals(currentUri.Host, targetUri.Host, StringComparison.OrdinalIgnoreCase) &&
+                       string.Equals(GetStreamerNameFromUrl(current), GetStreamerNameFromUrl(channelUrl), StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("StreamSelection", $"Could not read current WebView location; reloading stream. {ex.Message}");
+                return false;
+            }
+        }
+
+        private static readonly System.Net.Http.HttpClient _kickApiClient = CreateKickApiClient();
+
+        private static System.Net.Http.HttpClient CreateKickApiClient()
+        {
+            System.Net.Http.HttpClient client = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36");
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+            return client;
+        }
+
+        /// <summary>
+        /// Authoritatively checks whether a Kick channel is live AND streaming the expected category via Kick's
+        /// public channel API, instead of scraping the channel page (Kick's markup changes often - a renamed CSS
+        /// class made every streamer look like the wrong category and left the miner stuck evaluating). Returns
+        /// <c>null</c> when the check could not be performed so the caller can fall back to the DOM checks.
+        /// </summary>
+        private async Task<(bool Live, bool CategoryOk)?> IsKickStreamEligibleViaApiAsync(string? channelUrl, string? campaignSlug)
+        {
+            if (string.IsNullOrWhiteSpace(channelUrl))
+                return null;
+
+            string channel = GetStreamerNameFromUrl(channelUrl);
+            if (string.IsNullOrWhiteSpace(channel) || !System.Text.RegularExpressions.Regex.IsMatch(channel, "^[A-Za-z0-9_-]{1,64}$"))
+                return null;
+
+            try
+            {
+                using System.Net.Http.HttpResponseMessage response = await _kickApiClient.GetAsync($"https://kick.com/api/v2/channels/{channel}");
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return (false, false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    AppLogger.Warn("KickSelection", $"Kick channel API returned {(int)response.StatusCode} for '{channel}'; falling back to DOM.");
+                    return null;
+                }
+
+                using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                if (!doc.RootElement.TryGetProperty("livestream", out JsonElement livestream) || livestream.ValueKind != JsonValueKind.Object)
+                {
+                    AppLogger.Debug("KickSelection", $"[Kick API eligibility] channel={channel} -> offline");
+                    return (false, false);
+                }
+
+                if (string.IsNullOrWhiteSpace(campaignSlug))
+                    return (true, true);
+
+                bool categoryOk = false;
+                if (livestream.TryGetProperty("categories", out JsonElement categories) && categories.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (JsonElement category in categories.EnumerateArray())
+                    {
+                        if (category.TryGetProperty("slug", out JsonElement slug) &&
+                            string.Equals(slug.GetString(), campaignSlug, StringComparison.OrdinalIgnoreCase))
+                        {
+                            categoryOk = true;
+                            break;
+                        }
+                    }
+                }
+
+                AppLogger.Debug("KickSelection", $"[Kick API eligibility] channel={channel}, slug={campaignSlug} -> live, categoryOk={categoryOk}");
+                return (true, categoryOk);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("KickSelection", $"Kick channel API check failed for '{channel}'; falling back to DOM. {ex.Message}");
+                return null;
+            }
         }
 
         /// <summary>
