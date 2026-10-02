@@ -159,8 +159,12 @@ namespace Core.Services
                         }
 
                         // 2. Apply gameEventDrops (completed drops) - these mark rewards as claimed via DropInstanceId
+                        // Match on the benefit id, falling back to the benefit name - either way only an award
+                        // made since this campaign started counts, since benefits can be reused across campaigns.
                         JsonObject? matchingEventDrop = gameEventDrops.OfType<JsonObject>()
-                            .FirstOrDefault(e => e["id"]?.GetValue<string>() == reward.DropInstanceId);
+                            .FirstOrDefault(e =>
+                                (e["id"]?.GetValue<string>() == reward.DropInstanceId && AwardedDuringCampaign(e, dropCampaign) != false) ||
+                                (string.Equals(e["name"]?.GetValue<string>(), reward.Name, StringComparison.OrdinalIgnoreCase) && AwardedDuringCampaign(e, dropCampaign) == true));
 
                         if (matchingEventDrop != null)
                         {
@@ -193,6 +197,16 @@ namespace Core.Services
                 AppLogger.Error("TwitchDrops", "Fetching active campaigns failed.", ex);
                 return [];
             }
+        }
+
+        // null when Twitch gave no usable timestamp.
+        private static bool? AwardedDuringCampaign(JsonObject eventDrop, DropsCampaign campaign)
+        {
+            string? lastAwardedAt = eventDrop["lastAwardedAt"]?.GetValue<string>();
+            if (!DateTimeOffset.TryParse(lastAwardedAt, out DateTimeOffset awardedAt))
+                return null;
+
+            return awardedAt >= campaign.StartsAt;
         }
 
         /// <summary>
@@ -262,8 +276,10 @@ namespace Core.Services
                     int requiredMinutes = drop["requiredMinutesWatched"]?.GetValue<int>() ?? 0;
                     int requiredSubs = drop["requiredSubs"]?.GetValue<int>() ?? 0;
 
-                    int currentMinutes = 0;
-                    bool isClaimed = false;
+                    // Per-user state when the details response carries it; the inventory pass below overrides it.
+                    JsonObject? dropSelf = drop["self"] as JsonObject;
+                    int currentMinutes = dropSelf?["currentMinutesWatched"]?.GetValue<int>() ?? 0;
+                    bool isClaimed = dropSelf?["isClaimed"]?.GetValue<bool>() ?? false;
 
                     JsonArray? benefitEdges = drop["benefitEdges"]?.AsArray();
                     if (benefitEdges == null || benefitEdges.Count == 0)

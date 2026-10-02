@@ -653,7 +653,8 @@ namespace UI.Views
                 _watchingItems.Clear();
                 _completedItems.Clear();
 
-                IReadOnlyList<DropsCampaign> allCampaigns = await _dropsService.GetAllActiveCampaignsAsync(_kickWebView, _kickService.Status, _twitchWebView, _twitchService.Status, _twitchGqlService, cts.Token);
+                IReadOnlyList<DropsCampaign> allCampaigns = DropsInventoryManager.Instance.ApplyRememberedClaims(
+                    [.. await _dropsService.GetAllActiveCampaignsAsync(_kickWebView, _kickService.Status, _twitchWebView, _twitchService.Status, _twitchGqlService, cts.Token)]);
                 AppLogger.Info("Dashboard", $"Campaign load completed. totalCampaigns={allCampaigns.Count}, twitchStatus={_twitchService.Status}, kickStatus={_kickService.Status}");
 
                 var allowed = allCampaigns

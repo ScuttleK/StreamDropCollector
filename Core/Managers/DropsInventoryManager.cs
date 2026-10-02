@@ -198,6 +198,7 @@ namespace Core.Managers
         {
             LoadLastWatchedStreamers();
             LoadPinnedCampaignFromDisk();
+            LoadClaimedRewardsFromDisk();
             UISettingsManager.Instance.MiningPriorityModeChanged += OnMiningPriorityModeChanged;
             UISettingsManager.Instance.GameWhitelistChanged += OnGameWhitelistChanged;
             UISettingsManager.Instance.PriorityQueueChanged += OnPriorityQueueChanged;
@@ -381,11 +382,11 @@ namespace Core.Managers
                 UISettingsManager.Instance.UpdateAvailableGameFilterOptions(sourceCampaigns);
 
                 // Materialize before iterating to avoid concurrent modification
-                List<DropsCampaign> filteredCampaigns = ApplyRetainedClaimErrors(sourceCampaigns
+                List<DropsCampaign> filteredCampaigns = ApplyRetainedClaimErrors(ApplyRememberedClaims(sourceCampaigns
                     .Where(c => UISettingsManager.Instance.IsCampaignAllowedByWhitelist(c))
                     .Where(c => c.StartsAt <= DateTimeOffset.Now && c.EndsAt > DateTimeOffset.Now)
                     .OrderBy(x => x.Platform).ThenBy(x => x.GameName)
-                    .ToList());
+                    .ToList()));
 
                 ActiveCampaigns.Clear();
                 // Safe: filtered is materialized list
@@ -603,7 +604,7 @@ namespace Core.Managers
         public void UpdateCampaigns(IEnumerable<DropsCampaign> campaigns, IGqlService? twitchGqlService, bool startWatching = true)
         {
             _twitchGqlService = twitchGqlService;
-            List<DropsCampaign> allCampaigns = campaigns.ToList();
+            List<DropsCampaign> allCampaigns = ApplyRememberedClaims(campaigns.ToList());
 
             lock (_campaignSnapshotSync)
             {
@@ -845,6 +846,7 @@ namespace Core.Managers
                         if (claimResult)
                         {
                             _rewardClaimFailedAtUtc.Remove(claimKey);
+                            RememberClaimedReward(parentCampaign, item.Id);
                             bool inventoryUpdated = MarkRewardClaimedInActiveCampaigns(parentCampaign.Id, item.Id);
                             if (!inventoryUpdated)
                             {
@@ -877,6 +879,11 @@ namespace Core.Managers
                 {
                     NotificationManager.ShowNotification("Drop Ready to Claim", $"You have {readyToClaimRewards.Count} drops rewards ready to claim. Please claim them manually.");
                 }
+
+                // Re-read after the claim pass: claims above update ActiveCampaigns, and selecting from the pre-claim
+                // snapshot re-picked the campaign that had just been completed.
+                if (readyToClaimRewards.Count > 0)
+                    campaignSnapshot = Application.Current.Dispatcher.Invoke(() => ActiveCampaigns.ToList());
 
                 List<DropsCampaign> snapshot = campaignSnapshot;
                 List<DropsCampaign> readyToClaimOnlyCampaigns = snapshot
@@ -2834,6 +2841,93 @@ namespace Core.Managers
             catch (Exception ex)
             {
                 AppLogger.Warn("Inventory", $"[PinnedCampaign] Failed to save cache. {ex.Message}");
+            }
+        }
+
+        // Twitch rewards this app has successfully claimed, keyed "campaignId|rewardId" with the campaign's end time
+        // for pruning. Twitch drops are one-time per campaign, but once claimed they can drop out of the inventory's
+        // in-progress list and come back from the campaign details as 0 minutes / unclaimed - the miner then went
+        // back to watching a finished campaign and the Completed list never filled. Re-applied on every rebuild.
+        private static readonly string _claimedRewardsFilePath = Path.Combine(
+            Environment.ExpandEnvironmentVariables("%APPDATA%"),
+            "Stream Drop Collector",
+            "claimed-rewards.json");
+        private readonly Dictionary<string, DateTimeOffset> _claimedTwitchRewards = new();
+
+        private static string ClaimedRewardKey(string campaignId, string rewardId) => $"{campaignId}|{rewardId}";
+
+        private void RememberClaimedReward(DropsCampaign campaign, string rewardId)
+        {
+            if (campaign.Platform != Platform.Twitch)
+                return;
+
+            lock (_claimedTwitchRewards)
+            {
+                _claimedTwitchRewards[ClaimedRewardKey(campaign.Id, rewardId)] = campaign.EndsAt;
+                foreach (string expired in _claimedTwitchRewards.Where(kv => kv.Value < DateTimeOffset.Now.AddDays(-1)).Select(kv => kv.Key).ToList())
+                    _claimedTwitchRewards.Remove(expired);
+            }
+
+            SaveClaimedRewardsToDisk();
+        }
+
+        public List<DropsCampaign> ApplyRememberedClaims(List<DropsCampaign> campaigns)
+        {
+            lock (_claimedTwitchRewards)
+            {
+                if (_claimedTwitchRewards.Count == 0)
+                    return campaigns;
+
+                return [.. campaigns.Select(campaign => campaign.Platform != Platform.Twitch ? campaign : campaign with
+                {
+                    Rewards = [.. campaign.Rewards.Select(reward =>
+                        !reward.IsClaimed && _claimedTwitchRewards.ContainsKey(ClaimedRewardKey(campaign.Id, reward.Id))
+                            ? reward with { IsClaimed = true, ProgressMinutes = Math.Max(reward.ProgressMinutes, reward.RequiredMinutes) }
+                            : reward)]
+                })];
+            }
+        }
+
+        private void LoadClaimedRewardsFromDisk()
+        {
+            try
+            {
+                if (!File.Exists(_claimedRewardsFilePath))
+                    return;
+
+                Dictionary<string, DateTimeOffset>? entries = JsonSerializer.Deserialize<Dictionary<string, DateTimeOffset>>(File.ReadAllText(_claimedRewardsFilePath, Encoding.UTF8));
+                if (entries == null)
+                    return;
+
+                lock (_claimedTwitchRewards)
+                {
+                    foreach (KeyValuePair<string, DateTimeOffset> entry in entries.Where(e => e.Value >= DateTimeOffset.Now.AddDays(-1)))
+                        _claimedTwitchRewards[entry.Key] = entry.Value;
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("Inventory", $"[ClaimedRewards] Failed to load cache. {ex.Message}");
+            }
+        }
+
+        private void SaveClaimedRewardsToDisk()
+        {
+            try
+            {
+                string? directory = Path.GetDirectoryName(_claimedRewardsFilePath);
+                if (!string.IsNullOrWhiteSpace(directory))
+                    Directory.CreateDirectory(directory);
+
+                string json;
+                lock (_claimedTwitchRewards)
+                    json = JsonSerializer.Serialize(_claimedTwitchRewards, new JsonSerializerOptions { WriteIndented = true });
+
+                File.WriteAllText(_claimedRewardsFilePath, json, Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("Inventory", $"[ClaimedRewards] Failed to save cache. {ex.Message}");
             }
         }
 
