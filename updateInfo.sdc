@@ -1,11 +1,22 @@
 {
-  "version": "1.0.13",
-  "type": "Feature",
+  "version": "1.0.14",
+  "type": "Fix",
   "changelog": [
-    "Drops with an unresolved claim error are now automatically skipped in favor of the next campaign in queue, instead of getting stuck retrying the same failing claim - re-checked every time a campaign is selected, so it resumes normally once the error clears",
-    "The Watch Streak page's frequency selector, add-streamer box, and queue now gray out and disable entirely when \"Enable Watch Streak\" is off, not just the toggle itself"
+    "Fixed the miner getting stuck on \"Evaluating\" and never farming: Kick changed its page layout so every Kick streamer looked like the wrong game, and each check crawled through dozens of channel pages while Twitch progress froze - Kick streams are now checked through Kick's own channel API in under a second",
+    "The miner no longer reloads a stream that's already playing when it re-checks its picks, so partially watched minutes aren't thrown away",
+    "A drop claim that keeps failing (e.g. a Kick reward that needs a linked account) is now retried every 15 minutes instead of restarting both streams every minute",
+    "The Dashboard's Kick online/offline indicators no longer get rate-limited by Kick",
+    "Security: your Kick session token is only ever used on kick.com pages, campaign names and IDs are safely escaped before use in page scripts, and the updater refuses to install an update that can't be verified with a published SHA256 hash"
   ],
   "historic_versions": [
+    {
+      "version": "1.0.13",
+      "type": "Feature",
+      "changelog": [
+        "Drops with an unresolved claim error are now automatically skipped in favor of the next campaign in queue, instead of getting stuck retrying the same failing claim - re-checked every time a campaign is selected, so it resumes normally once the error clears",
+        "The Watch Streak page's frequency selector, add-streamer box, and queue now gray out and disable entirely when \"Enable Watch Streak\" is off, not just the toggle itself"
+      ]
+    },
     {
       "version": "1.0.12",
       "type": "Fix",
