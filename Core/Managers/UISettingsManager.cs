@@ -310,9 +310,21 @@ namespace Core.Managers
         /// <see cref="LatestChangelog"/> pre-formatted as a single bullet-point block, ready to drop straight into
         /// a TextBlock or MessageBox.
         /// </summary>
-        public string LatestChangelogText => _latestChangelog.Count == 0
+        public string LatestChangelogText => _changelogSinceInstalled.Count == 0
             ? string.Empty
-            : string.Join(Environment.NewLine, _latestChangelog.Select(item => $"• {item}"));
+            : string.Join(Environment.NewLine + Environment.NewLine, _changelogSinceInstalled.Select(group =>
+                $"v{group.Version}" + Environment.NewLine + string.Join(Environment.NewLine, group.Items.Select(item => $"• {item}"))));
+
+        /// <summary>One published version's changelog, for listing everything between the installed and latest version.</summary>
+        public sealed record ChangelogGroup(string Version, IReadOnlyList<string> Items);
+
+        private List<ChangelogGroup> _changelogSinceInstalled = new();
+
+        /// <summary>
+        /// Every version newer than the one installed, newest first, each with its own changelog - so updating from
+        /// e.g. v1.0.15 to v1.0.17 lists what changed in v1.0.17 and v1.0.16, not just the latest release.
+        /// </summary>
+        public IReadOnlyList<ChangelogGroup> ChangelogSinceInstalled => _changelogSinceInstalled.AsReadOnly();
 
         public string TwitchWhitelistSummary => _twitchGameWhitelistSlugs.Count == 0
             ? "All active Twitch games are allowed"
@@ -573,6 +585,23 @@ namespace Core.Managers
             // ready first.
             LatestVersion = serverUpdateInfo.Version;
             _latestChangelog = isNewer ? (serverUpdateInfo.Changelog ?? new List<string>()) : new List<string>();
+
+            _changelogSinceInstalled = new List<ChangelogGroup>();
+            if (isNewer && Version.TryParse(localVersionInfo.FileVersion, out Version? installedVersion))
+            {
+                IEnumerable<(string? Version, List<string>? Changelog)> published =
+                    new[] { (serverUpdateInfo.Version, serverUpdateInfo.Changelog) }
+                    .Concat((serverUpdateInfo.HistoricVersions ?? new()).Select(h => (h.Version, h.Changelog)));
+
+                _changelogSinceInstalled = published
+                    .Where(p => Version.TryParse(p.Version, out Version? v) && v > installedVersion && p.Changelog is { Count: > 0 })
+                    .GroupBy(p => p.Version!)
+                    .Select(g => g.First())
+                    .OrderByDescending(p => Version.Parse(p.Version!))
+                    .Select(p => new ChangelogGroup(p.Version!, p.Changelog!.AsReadOnly()))
+                    .ToList();
+            }
+            OnPropertyChanged(nameof(ChangelogSinceInstalled));
             OnPropertyChanged(nameof(LatestChangelog));
             OnPropertyChanged(nameof(LatestChangelogText));
 

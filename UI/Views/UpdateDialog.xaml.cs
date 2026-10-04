@@ -26,8 +26,8 @@ namespace UI.Views
             {
                 TitleText.Text = "Update available";
                 VersionText.Text = $"v{installed}  →  v{latest}";
-                ChangelogList.ItemsSource = UISettingsManager.Instance.LatestChangelog;
-                ChangelogPanel.Visibility = UISettingsManager.Instance.LatestChangelog.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                ChangelogList.ItemsSource = UISettingsManager.Instance.ChangelogSinceInstalled;
+                ChangelogPanel.Visibility = UISettingsManager.Instance.ChangelogSinceInstalled.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             }
             else
             {
