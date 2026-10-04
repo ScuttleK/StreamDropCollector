@@ -123,6 +123,9 @@ namespace Core.Services
                 JsonArray gameEventDrops = ongoingCampaigns["data"]?["currentUser"]?["inventory"]?["gameEventDrops"]?.AsArray() ?? new JsonArray(); // Already finished/claimed drops
 
                 AppLogger.Debug("TwitchDrops", $"Inventory: dropCampaignsInProgress={dropCampaignsInProgress.Count}, gameEventDrops={gameEventDrops.Count}");
+                if (ongoingCampaigns["data"]?["currentUser"]?["inventory"] is JsonObject inventoryObj)
+                    AppLogger.Debug("TwitchDrops", "Inventory fields: " + string.Join(", ", inventoryObj.Select(kv =>
+                        kv.Value is JsonArray arr ? $"{kv.Key}[{arr.Count}]" : $"{kv.Key}={(kv.Value?.ToJsonString() is string s && s.Length > 120 ? s[..120] + "..." : kv.Value?.ToJsonString())}")));
                 foreach (JsonObject eventDrop in gameEventDrops.OfType<JsonObject>())
                     AppLogger.Debug("TwitchDrops", $"Inventory claimed benefit: id={eventDrop["id"]}, name='{eventDrop["name"]}', lastAwardedAt={eventDrop["lastAwardedAt"]}");
                 foreach (JsonObject inProgress in dropCampaignsInProgress.OfType<JsonObject>())

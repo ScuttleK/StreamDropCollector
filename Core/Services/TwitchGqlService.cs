@@ -203,6 +203,14 @@ namespace Core.Services
                 string payload = await _host.CaptureGqlRequestBodyContainingAsyncWithRetry(operationName, 5000, 5, ct: ct);
                 AppLogger.Debug("TwitchGql", $"Captured page GQL request for '{operationName}': {payload}");
 
+                // Verbose diagnostics: keep watching the page a little longer so every later GQL request it makes
+                // (e.g. lazily loaded inventory sections) shows up in the log too.
+                if (Core.Managers.UISettingsManager.Instance.VerboseDebugLogging)
+                {
+                    try { await _host.CaptureGqlRequestBodyContainingAsync("__verbose_log_only__", 10000, ct); }
+                    catch { }
+                }
+
                 using JsonDocument document = JsonDocument.Parse(payload);
                 JsonElement root = document.RootElement;
 
