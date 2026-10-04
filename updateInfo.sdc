@@ -1,11 +1,18 @@
 {
-  "version": "1.0.18",
+  "version": "1.0.19",
   "type": "Fix",
   "changelog": [
-    "With \"Every time the app starts\" selected, an available update is now shown every time you launch the app, instead of only a quick Windows notification",
-    "New in-app update window with the version you're on, the new version, what's changed, and a download progress bar - also used by \"Check for Updates Now\""
+    "The update window now lists what's new in every version since the one you have installed, not just the latest release"
   ],
   "historic_versions": [
+    {
+      "version": "1.0.18",
+      "type": "Fix",
+      "changelog": [
+        "With \"Every time the app starts\" selected, an available update is now shown every time you launch the app, instead of only a quick Windows notification",
+        "New in-app update window with the version you're on, the new version, what's changed, and a download progress bar - also used by \"Check for Updates Now\""
+      ]
+    },
     {
       "version": "1.0.17",
       "type": "Fix",
