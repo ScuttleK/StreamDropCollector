@@ -201,6 +201,7 @@ namespace Core.Services
                     await _host.NavigateAsync($"https://www.twitch.tv/drops/campaigns?t={DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
 
                 string payload = await _host.CaptureGqlRequestBodyContainingAsyncWithRetry(operationName, 5000, 5, ct: ct);
+                AppLogger.Debug("TwitchGql", $"Captured page GQL request for '{operationName}': {payload}");
 
                 using JsonDocument document = JsonDocument.Parse(payload);
                 JsonElement root = document.RootElement;

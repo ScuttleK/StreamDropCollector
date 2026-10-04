@@ -571,6 +571,8 @@ namespace UI.Views
                     if (string.IsNullOrWhiteSpace(postData))
                         return;
 
+                    AppLogger.Debug("WebViewCapture", $"Page GQL request seen while waiting for '{triggerText}': {postData}");
+
                     if (IsMatchingOperationPayload(postData))
                     {
                         Cleanup();
