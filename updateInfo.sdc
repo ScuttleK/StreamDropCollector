@@ -1,11 +1,18 @@
 {
-  "version": "1.0.15",
+  "version": "1.0.16",
   "type": "Fix",
   "changelog": [
-    "Fixed the miner going straight back to a Twitch campaign it had just claimed instead of moving on to the next one",
-    "Fixed claimed Twitch drops reappearing as unclaimed at 0 minutes after a refresh, which kept the miner watching finished campaigns and left the Completed list empty - Twitch moved its list of claimed drops to a new place, and the app now reads it from there"
+    "The app's hidden Twitch players (drop mining and Watch Streak) now run audio-only instead of decoding video, so watching the same channel yourself in a browser no longer stutters"
   ],
   "historic_versions": [
+    {
+      "version": "1.0.15",
+      "type": "Fix",
+      "changelog": [
+        "Fixed the miner going straight back to a Twitch campaign it had just claimed instead of moving on to the next one",
+        "Fixed claimed Twitch drops reappearing as unclaimed at 0 minutes after a refresh, which kept the miner watching finished campaigns and left the Completed list empty - Twitch moved its list of claimed drops to a new place, and the app now reads it from there"
+      ]
+    },
     {
       "version": "1.0.14",
       "type": "Fix",
