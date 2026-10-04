@@ -1,11 +1,19 @@
 {
-  "version": "1.0.17",
+  "version": "1.0.18",
   "type": "Fix",
   "changelog": [
-    "Game and campaign icons on the Dashboard and Inventory are no longer cut off - the whole image is shown",
-    "The Twitch and Kick progress cards now show watched minutes next to the percentage, e.g. \"63% complete, 38 / 60 min\""
+    "With \"Every time the app starts\" selected, an available update is now shown every time you launch the app, instead of only a quick Windows notification",
+    "New in-app update window with the version you're on, the new version, what's changed, and a download progress bar - also used by \"Check for Updates Now\""
   ],
   "historic_versions": [
+    {
+      "version": "1.0.17",
+      "type": "Fix",
+      "changelog": [
+        "Game and campaign icons on the Dashboard and Inventory are no longer cut off - the whole image is shown",
+        "The Twitch and Kick progress cards now show watched minutes next to the percentage, e.g. \"63% complete, 38 / 60 min\""
+      ]
+    },
     {
       "version": "1.0.16",
       "type": "Fix",
