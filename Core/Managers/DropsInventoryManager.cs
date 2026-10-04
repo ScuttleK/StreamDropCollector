@@ -51,6 +51,8 @@ namespace Core.Managers
         public event Action<string, string?>? KickDropChanged;
         // Fires with the campaign ID when ALL rewards in a campaign become claimed.
         public event Action<string>? CampaignCompleted;
+        // (platform, campaign "watched / required min", current drop "watched / required min")
+        public event Action<Platform, string, string>? ProgressMinutesChanged;
         // Fires with the set of campaign IDs that were skipped this evaluation cycle (all streamers offline).
         public event Action<IReadOnlySet<string>>? CampaignsSkippedOffline;
         // Fires (campaignId, rewardId, error) whenever a reward's claim-failure state changes here - error
@@ -543,6 +545,7 @@ namespace Core.Managers
                 byte twitchDropPct = CalculateLiveDropProgress(currentTwitchCampaign, twitchDropWatchedSecondsSnapshot);
                 VerboseLog("LiveProgress", $"Twitch tick campaignId={currentTwitchCampaign.Id}, campaignWatchedSeconds={twitchWatchedSecondsSnapshot}, dropWatchedSeconds={twitchDropWatchedSecondsSnapshot}, campaignPct={twitchCampPct}, dropPct={twitchDropPct}");
                 TwitchProgressChanged?.Invoke(twitchCampPct, twitchDropPct);
+                RaiseProgressMinutes(Platform.Twitch, _currentTwitchCampaign ?? currentTwitchCampaign, twitchDropWatchedSecondsSnapshot);
             }
 
             DropsCampaign? currentKickCampaign = _currentKickCampaign;
@@ -580,6 +583,7 @@ namespace Core.Managers
                 byte kickDropPct = CalculateLiveDropProgress(currentKickCampaign, kickDropWatchedSecondsSnapshot);
                 VerboseLog("LiveProgress", $"Kick tick campaignId={currentKickCampaign.Id}, campaignWatchedSeconds={kickWatchedSecondsSnapshot}, dropWatchedSeconds={kickDropWatchedSecondsSnapshot}, campaignPct={kickCampPct}, dropPct={kickDropPct}");
                 KickProgressChanged?.Invoke(kickCampPct, kickDropPct);
+                RaiseProgressMinutes(Platform.Kick, _currentKickCampaign ?? currentKickCampaign, kickDropWatchedSecondsSnapshot);
             }
         }
         /// <summary>
@@ -701,6 +705,30 @@ namespace Core.Managers
         /// <param name="totalWatchedSeconds">The total number of seconds the user has watched, used to determine progress toward the next reward.</param>
         /// <returns>A value between 0 and 100 representing the percentage of progress toward the next unclaimed reward. Returns
         /// 100 if all rewards have been claimed.</returns>
+        /// <summary>
+        /// Raises <see cref="ProgressMinutesChanged"/> with "watched / required min" texts for the campaign as a whole
+        /// and for the next unclaimed drop, matching the minutes the queue shows. Empty texts clear the display.
+        /// </summary>
+        private void RaiseProgressMinutes(Platform platform, DropsCampaign? campaign, int dropWatchedSeconds)
+        {
+            if (campaign == null)
+            {
+                ProgressMinutesChanged?.Invoke(platform, string.Empty, string.Empty);
+                return;
+            }
+
+            int campaignRequired = campaign.Rewards.Sum(r => r.RequiredMinutes);
+            int campaignWatched = campaign.Rewards.Sum(r => Math.Min(r.ProgressMinutes, r.RequiredMinutes));
+            DropsReward? nextReward = campaign.Rewards.Where(r => !r.IsClaimed).OrderBy(r => r.RequiredMinutes).FirstOrDefault();
+
+            string campaignText = $"{campaignWatched} / {campaignRequired} min";
+            string dropText = nextReward == null
+                ? string.Empty
+                : $"{Math.Min(dropWatchedSeconds / 60, nextReward.RequiredMinutes)} / {nextReward.RequiredMinutes} min";
+
+            ProgressMinutesChanged?.Invoke(platform, campaignText, dropText);
+        }
+
         private static byte CalculateLiveDropProgress(DropsCampaign? campaign, int totalWatchedSeconds)
         {
             if (campaign == null)
@@ -771,6 +799,7 @@ namespace Core.Managers
                     _lastTwitchDropId = null;
                     TwitchDropChanged?.Invoke(string.Empty, null);
                     TwitchProgressChanged?.Invoke(0, 0);
+                    RaiseProgressMinutes(Platform.Twitch, null, 0);
                     lock (_liveProgressSync) _twitchAppliedMinuteBucket = _twitchWatchedSeconds / 60;
                 }
                 if (onlyPlatform == null || onlyPlatform == Platform.Kick)
@@ -780,6 +809,7 @@ namespace Core.Managers
                     _lastKickDropId = null;
                     KickDropChanged?.Invoke(string.Empty, null);
                     KickProgressChanged?.Invoke(0, 0);
+                    RaiseProgressMinutes(Platform.Kick, null, 0);
                     lock (_liveProgressSync) _kickAppliedMinuteBucket = _kickWatchedSeconds / 60;
                 }
 
@@ -1050,6 +1080,7 @@ namespace Core.Managers
                         byte initialTwitchPct = CalculateLiveCampaignProgress(bestTwitch);
                         byte initialTwitchDropPct = CalculateLiveDropProgress(bestTwitch, _twitchDropWatchedSeconds);
                         TwitchProgressChanged?.Invoke(initialTwitchPct, initialTwitchDropPct);
+                        RaiseProgressMinutes(Platform.Twitch, bestTwitch, _twitchDropWatchedSeconds);
                         RaiseTwitchDropChangedIfNeeded(nextTwitchReward);
 
                         AppLogger.Debug("TwitchSelection", $"[DropsInventoryManager] Watching Twitch stream: {twitchUrl}");
@@ -1177,6 +1208,7 @@ namespace Core.Managers
                         byte initialKickPct = CalculateLiveCampaignProgress(bestKick);
                         byte initialKickDropPct = CalculateLiveDropProgress(bestKick, _kickDropWatchedSeconds);
                         KickProgressChanged?.Invoke(initialKickPct, initialKickDropPct);
+                        RaiseProgressMinutes(Platform.Kick, bestKick, _kickDropWatchedSeconds);
                         RaiseKickDropChangedIfNeeded(nextKickReward);
 
                         AppLogger.Debug("KickSelection", $"[DropsInventoryManager] Watching Kick stream: {kickUrl}");

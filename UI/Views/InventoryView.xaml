@@ -113,7 +113,7 @@
                                         <RectangleGeometry RadiusX="10" RadiusY="10" Rect="0,0,76,76"/>
                                     </Border.Clip>
 
-                                    <Image local:ImageEx.SourceUrl="{Binding GameImageUrl}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                    <Image local:ImageEx.SourceUrl="{Binding GameImageUrl}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
                                 </Border>
 
                                 <!-- Campaign Info -->
@@ -254,7 +254,7 @@
                                                                 <RectangleGeometry RadiusX="8" RadiusY="8" Rect="0,0,46,46"/>
                                                             </Border.Clip>
 
-                                                            <Image local:ImageEx.SourceUrl="{Binding ImageUrl}" Stretch="UniformToFill"/>
+                                                            <Image local:ImageEx.SourceUrl="{Binding ImageUrl}" Stretch="Uniform"/>
                                                         </Border>
 
                                                         <!-- Name + Progress -->

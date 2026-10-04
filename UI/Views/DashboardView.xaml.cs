@@ -134,6 +134,16 @@ namespace UI.Views
                 OnPropertyChanged();
             }
         }
+        // "watched / required min" shown in gray beside each "% complete" (same minutes as the queue).
+        private string _twitchCampaignMinutes = string.Empty;
+        public string TwitchCampaignMinutes { get => _twitchCampaignMinutes; set { _twitchCampaignMinutes = value; OnPropertyChanged(); } }
+        private string _twitchDropMinutes = string.Empty;
+        public string TwitchDropMinutes { get => _twitchDropMinutes; set { _twitchDropMinutes = value; OnPropertyChanged(); } }
+        private string _kickCampaignMinutes = string.Empty;
+        public string KickCampaignMinutes { get => _kickCampaignMinutes; set { _kickCampaignMinutes = value; OnPropertyChanged(); } }
+        private string _kickDropMinutes = string.Empty;
+        public string KickDropMinutes { get => _kickDropMinutes; set { _kickDropMinutes = value; OnPropertyChanged(); } }
+
         private byte _twitchCampaignProgress = 0;
         public byte TwitchCampaignProgress
         {
@@ -379,6 +389,25 @@ namespace UI.Views
                 {
                     KickCampaignProgress = campPct;
                     KickDropProgress = dropPct;
+                });
+            };
+
+            DropsInventoryManager.Instance.ProgressMinutesChanged += (platform, campaignMinutes, dropMinutes) =>
+            {
+                System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    string campaignText = string.IsNullOrEmpty(campaignMinutes) ? string.Empty : $", {campaignMinutes}";
+                    string dropText = string.IsNullOrEmpty(dropMinutes) ? string.Empty : $", {dropMinutes}";
+                    if (platform == Platform.Twitch)
+                    {
+                        TwitchCampaignMinutes = campaignText;
+                        TwitchDropMinutes = dropText;
+                    }
+                    else
+                    {
+                        KickCampaignMinutes = campaignText;
+                        KickDropMinutes = dropText;
+                    }
                 });
             };
 

@@ -383,10 +383,10 @@
                         <TextBlock Text="CAMPAIGN" Style="{StaticResource SectionLabel}" Margin="0,0,0,8"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8"
                                     Visibility="{Binding TwitchCampaignName, Converter={StaticResource StringToVisibilityConverter}}">
-                            <Border Width="28" Height="36" CornerRadius="4" ClipToBounds="True"
+                            <Border Width="36" Height="36" CornerRadius="4" ClipToBounds="True"
                                     Background="{DynamicResource SurfaceMutedBrush}" Margin="0,0,10,0"
                                     Visibility="{Binding TwitchCampaignImageUrl, Converter={StaticResource StringToVisibilityConverter}}">
-                                <Image local:ImageEx.SourceUrl="{Binding TwitchCampaignImageUrl}" Stretch="UniformToFill"/>
+                                <Image local:ImageEx.SourceUrl="{Binding TwitchCampaignImageUrl}" Stretch="Uniform"/>
                             </Border>
                             <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
                                 <Run Text="{Binding TwitchCampaignName}" FontWeight="SemiBold"
@@ -394,8 +394,9 @@
                             </TextBlock>
                         </StackPanel>
                         <ProgressBar Value="{Binding TwitchCampaignProgress}" Minimum="0" Maximum="100" Margin="0,0,0,6"/>
-                        <TextBlock Text="{Binding TwitchCampaignProgress, StringFormat='{}{0}% complete'}"
-                                   FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
+                        <TextBlock FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20">
+                            <Run Text="{Binding TwitchCampaignProgress, StringFormat='{}{0}% complete', Mode=OneWay}"/><Run Text="{Binding TwitchCampaignMinutes, Mode=OneWay}"/>
+                        </TextBlock>
 
                         <TextBlock Text="CURRENT DROP" Style="{StaticResource SectionLabel}" Margin="0,0,0,8"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8"
@@ -403,15 +404,16 @@
                             <Border Width="28" Height="28" CornerRadius="4" ClipToBounds="True"
                                     Background="{DynamicResource SurfaceMutedBrush}" Margin="0,0,10,0"
                                     Visibility="{Binding TwitchDropImageUrl, Converter={StaticResource StringToVisibilityConverter}}">
-                                <Image local:ImageEx.SourceUrl="{Binding TwitchDropImageUrl}" Stretch="UniformToFill"/>
+                                <Image local:ImageEx.SourceUrl="{Binding TwitchDropImageUrl}" Stretch="Uniform"/>
                             </Border>
                             <TextBlock Text="{Binding TwitchDropName}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
                         <ProgressBar Value="{Binding TwitchDropProgress}" Minimum="0" Maximum="100" Margin="0,0,0,6"/>
-                        <TextBlock Text="{Binding TwitchDropProgress, StringFormat='{}{0}% complete'}"
-                                   FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10"/>
+                        <TextBlock FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10">
+                            <Run Text="{Binding TwitchDropProgress, StringFormat='{}{0}% complete', Mode=OneWay}"/><Run Text="{Binding TwitchDropMinutes, Mode=OneWay}"/>
+                        </TextBlock>
                         <TextBlock FontSize="12"
                                    Visibility="{Binding TwitchWatchedChannel, Converter={StaticResource StringToVisibilityConverter}}">
                             <Run Text="Watching " Foreground="{DynamicResource TextMutedBrush}"/>
@@ -453,10 +455,10 @@
                         <TextBlock Text="CAMPAIGN" Style="{StaticResource SectionLabel}" Margin="0,0,0,8"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8"
                                     Visibility="{Binding KickCampaignName, Converter={StaticResource StringToVisibilityConverter}}">
-                            <Border Width="28" Height="36" CornerRadius="4" ClipToBounds="True"
+                            <Border Width="36" Height="36" CornerRadius="4" ClipToBounds="True"
                                     Background="{DynamicResource SurfaceMutedBrush}" Margin="0,0,10,0"
                                     Visibility="{Binding KickCampaignImageUrl, Converter={StaticResource StringToVisibilityConverter}}">
-                                <Image local:ImageEx.SourceUrl="{Binding KickCampaignImageUrl}" Stretch="UniformToFill"/>
+                                <Image local:ImageEx.SourceUrl="{Binding KickCampaignImageUrl}" Stretch="Uniform"/>
                             </Border>
                             <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
                                 <Run Text="{Binding KickCampaignName}" FontWeight="SemiBold"
@@ -464,8 +466,9 @@
                             </TextBlock>
                         </StackPanel>
                         <ProgressBar Value="{Binding KickCampaignProgress}" Minimum="0" Maximum="100" Margin="0,0,0,6"/>
-                        <TextBlock Text="{Binding KickCampaignProgress, StringFormat='{}{0}% complete'}"
-                                   FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
+                        <TextBlock FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20">
+                            <Run Text="{Binding KickCampaignProgress, StringFormat='{}{0}% complete', Mode=OneWay}"/><Run Text="{Binding KickCampaignMinutes, Mode=OneWay}"/>
+                        </TextBlock>
 
                         <TextBlock Text="CURRENT DROP" Style="{StaticResource SectionLabel}" Margin="0,0,0,8"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8"
@@ -473,15 +476,16 @@
                             <Border Width="28" Height="28" CornerRadius="4" ClipToBounds="True"
                                     Background="{DynamicResource SurfaceMutedBrush}" Margin="0,0,10,0"
                                     Visibility="{Binding KickDropImageUrl, Converter={StaticResource StringToVisibilityConverter}}">
-                                <Image local:ImageEx.SourceUrl="{Binding KickDropImageUrl}" Stretch="UniformToFill"/>
+                                <Image local:ImageEx.SourceUrl="{Binding KickDropImageUrl}" Stretch="Uniform"/>
                             </Border>
                             <TextBlock Text="{Binding KickDropName}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
                         <ProgressBar Value="{Binding KickDropProgress}" Minimum="0" Maximum="100" Margin="0,0,0,6"/>
-                        <TextBlock Text="{Binding KickDropProgress, StringFormat='{}{0}% complete'}"
-                                   FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10"/>
+                        <TextBlock FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10">
+                            <Run Text="{Binding KickDropProgress, StringFormat='{}{0}% complete', Mode=OneWay}"/><Run Text="{Binding KickDropMinutes, Mode=OneWay}"/>
+                        </TextBlock>
                         <TextBlock FontSize="12"
                                    Visibility="{Binding KickWatchedChannel, Converter={StaticResource StringToVisibilityConverter}}">
                             <Run Text="Watching " Foreground="{DynamicResource TextMutedBrush}"/>
@@ -667,10 +671,10 @@
                                                             </ControlTemplate>
                                                         </Button.Template>
                                                     </Button>
-                                                    <Border Width="26" Height="34" CornerRadius="4" ClipToBounds="True"
+                                                    <Border Width="34" Height="34" CornerRadius="4" ClipToBounds="True"
                                                             Background="{DynamicResource SurfaceMutedBrush}"
                                                             Visibility="{Binding GameImageUrl, Converter={StaticResource StringToVisibilityConverter}}">
-                                                        <Image local:ImageEx.SourceUrl="{Binding GameImageUrl}" Stretch="UniformToFill"/>
+                                                        <Image local:ImageEx.SourceUrl="{Binding GameImageUrl}" Stretch="Uniform"/>
                                                     </Border>
                                                 </StackPanel>
 
@@ -1001,10 +1005,10 @@
                                                     </Style>
                                                 </Ellipse.Style>
                                             </Ellipse>
-                                            <Border Width="26" Height="34" CornerRadius="4" ClipToBounds="True"
+                                            <Border Width="34" Height="34" CornerRadius="4" ClipToBounds="True"
                                                     Background="{DynamicResource SurfaceMutedBrush}"
                                                     Visibility="{Binding GameImageUrl, Converter={StaticResource StringToVisibilityConverter}}">
-                                                <Image local:ImageEx.SourceUrl="{Binding GameImageUrl}" Stretch="UniformToFill"/>
+                                                <Image local:ImageEx.SourceUrl="{Binding GameImageUrl}" Stretch="Uniform"/>
                                             </Border>
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
