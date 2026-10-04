@@ -126,8 +126,13 @@ namespace Core.Services
                 if (ongoingCampaigns["data"]?["currentUser"]?["inventory"] is JsonObject inventoryObj)
                     AppLogger.Debug("TwitchDrops", "Inventory fields: " + string.Join(", ", inventoryObj.Select(kv =>
                         kv.Value is JsonArray arr ? $"{kv.Key}[{arr.Count}]" : $"{kv.Key}={(kv.Value?.ToJsonString() is string s && s.Length > 120 ? s[..120] + "..." : kv.Value?.ToJsonString())}")));
-                foreach (JsonObject eventDrop in gameEventDrops.OfType<JsonObject>())
-                    AppLogger.Debug("TwitchDrops", $"Inventory claimed benefit: id={eventDrop["id"]}, name='{eventDrop["name"]}', lastAwardedAt={eventDrop["lastAwardedAt"]}");
+                List<ClaimedBenefit> claimedBenefits = CollectClaimedBenefits(ongoingCampaigns["data"]?["currentUser"]?["inventory"] as JsonObject);
+                foreach (string key in new[] { "gameEventDropsConnection", "earnedDropRewards" })
+                    if (EdgeNodes(ongoingCampaigns["data"]?["currentUser"]?["inventory"]?[key]).FirstOrDefault() is JsonObject sampleNode)
+                        AppLogger.Debug("TwitchDrops", $"Inventory {key} sample node: {sampleNode.ToJsonString()}");
+                AppLogger.Info("TwitchDrops", $"Inventory claimed benefits found: {claimedBenefits.Count}");
+                foreach (ClaimedBenefit claimed in claimedBenefits)
+                    AppLogger.Debug("TwitchDrops", $"Inventory claimed benefit: ids={string.Join(",", claimed.Ids)}, name='{claimed.Name}', awardedAt={claimed.AwardedAt:u}");
                 foreach (JsonObject inProgress in dropCampaignsInProgress.OfType<JsonObject>())
                     foreach (JsonObject drop in (inProgress["timeBasedDrops"]?.AsArray() ?? new JsonArray()).OfType<JsonObject>())
                         AppLogger.Debug("TwitchDrops", $"Inventory in-progress drop: campaign={inProgress["id"]} ('{inProgress["name"]}'), drop={drop["id"]}, self={drop["self"]?.ToJsonString()}, benefits={string.Join(",", (drop["benefitEdges"]?.AsArray() ?? new JsonArray()).OfType<JsonObject>().Select(b => b["benefit"]?["id"]?.ToString()))}");
@@ -171,15 +176,14 @@ namespace Core.Services
                             }
                         }
 
-                        // 2. Apply gameEventDrops (completed drops) - these mark rewards as claimed via DropInstanceId
-                        // Match on the benefit id, falling back to the benefit name - either way only an award
-                        // made since this campaign started counts, since benefits can be reused across campaigns.
-                        JsonObject? matchingEventDrop = gameEventDrops.OfType<JsonObject>()
-                            .FirstOrDefault(e =>
-                                (e["id"]?.GetValue<string>() == reward.DropInstanceId && AwardedDuringCampaign(e, dropCampaign) != false) ||
-                                (string.Equals(e["name"]?.GetValue<string>(), reward.Name, StringComparison.OrdinalIgnoreCase) && AwardedDuringCampaign(e, dropCampaign) == true));
+                        // 2. Apply the inventory's claimed list - these mark rewards as claimed via DropInstanceId.
+                        // Match on the benefit id, falling back to the benefit name - either way an award known
+                        // to predate this campaign doesn't count, since benefits can be reused across campaigns.
+                        ClaimedBenefit? matchingClaim = claimedBenefits.FirstOrDefault(c =>
+                            (c.Ids.Contains(reward.DropInstanceId) && !(c.AwardedAt < dropCampaign.StartsAt)) ||
+                            (string.Equals(c.Name, reward.Name, StringComparison.OrdinalIgnoreCase) && c.AwardedAt >= dropCampaign.StartsAt));
 
-                        if (matchingEventDrop != null)
+                        if (matchingClaim != null)
                         {
                             // This reward has been fully claimed via a game event drop
                             updatedReward = updatedReward with
@@ -212,15 +216,66 @@ namespace Core.Services
             }
         }
 
-        // null when Twitch gave no usable timestamp.
-        private static bool? AwardedDuringCampaign(JsonObject eventDrop, DropsCampaign campaign)
-        {
-            string? lastAwardedAt = eventDrop["lastAwardedAt"]?.GetValue<string>();
-            if (!DateTimeOffset.TryParse(lastAwardedAt, out DateTimeOffset awardedAt))
-                return null;
+        private sealed record ClaimedBenefit(HashSet<string> Ids, string? Name, DateTimeOffset? AwardedAt);
 
-            return awardedAt >= campaign.StartsAt;
+        /// <summary>
+        /// Gathers the user's already-claimed drop benefits from the Inventory response. Twitch replaced the flat
+        /// <c>gameEventDrops</c> list (now always empty) with the paged <c>gameEventDropsConnection</c> and
+        /// <c>earnedDropRewards</c> connections, which left every claimed drop looking unclaimed at 0 minutes - so
+        /// all three shapes are read, and ids/names/timestamps are picked up wherever in each node they appear.
+        /// </summary>
+        private static List<ClaimedBenefit> CollectClaimedBenefits(JsonObject? inventory)
+        {
+            List<ClaimedBenefit> claimed = new List<ClaimedBenefit>();
+            if (inventory == null)
+                return claimed;
+
+            IEnumerable<JsonObject> nodes = (inventory["gameEventDrops"] as JsonArray ?? new JsonArray()).OfType<JsonObject>()
+                .Concat(EdgeNodes(inventory["gameEventDropsConnection"]))
+                .Concat(EdgeNodes(inventory["earnedDropRewards"]));
+
+            foreach (JsonObject node in nodes)
+            {
+                HashSet<string> ids = new HashSet<string>(StringComparer.Ordinal);
+                string? name = null;
+                DateTimeOffset? awardedAt = null;
+
+                // The node itself and its nested benefit/item objects can each carry the id, name and award time.
+                foreach (JsonObject part in new[] { node, node["benefit"] as JsonObject, node["item"] as JsonObject }.OfType<JsonObject>())
+                {
+                    if (part["id"] is JsonValue idValue && idValue.TryGetValue(out string? id) && !string.IsNullOrEmpty(id))
+                        ids.Add(id);
+
+                    if (name == null && (part["name"] ?? part["displayName"]) is JsonValue nameValue && nameValue.TryGetValue(out string? n))
+                        name = n;
+
+                    foreach (KeyValuePair<string, JsonNode?> property in part)
+                    {
+                        // Only award-time fields (lastAwardedAt, earnedAt, claimedAt...), not e.g. an item's createdAt.
+                        if (property.Key.EndsWith("At", StringComparison.Ordinal) &&
+                            (property.Key.Contains("Award", StringComparison.OrdinalIgnoreCase) ||
+                             property.Key.Contains("Earn", StringComparison.OrdinalIgnoreCase) ||
+                             property.Key.Contains("Claim", StringComparison.OrdinalIgnoreCase)) &&
+                            property.Value is JsonValue timeValue && timeValue.TryGetValue(out string? time) &&
+                            DateTimeOffset.TryParse(time, out DateTimeOffset parsed) &&
+                            (awardedAt == null || parsed > awardedAt))
+                        {
+                            awardedAt = parsed;
+                        }
+                    }
+                }
+
+                if (ids.Count > 0 || name != null)
+                    claimed.Add(new ClaimedBenefit(ids, name, awardedAt));
+            }
+
+            return claimed;
         }
+
+        private static IEnumerable<JsonObject> EdgeNodes(JsonNode? connection) =>
+            (connection?["edges"] as JsonArray ?? new JsonArray()).OfType<JsonObject>()
+                .Select(edge => edge["node"] as JsonObject)
+                .OfType<JsonObject>();
 
         /// <summary>
         /// Creates a new instance of the DropsCampaign class by extracting campaign details from the specified JSON
