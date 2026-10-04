@@ -1,10 +1,18 @@
 {
-  "version": "1.0.16",
+  "version": "1.0.17",
   "type": "Fix",
   "changelog": [
-    "The app's hidden Twitch players (drop mining and Watch Streak) now run audio-only instead of decoding video, so watching the same channel yourself in a browser no longer stutters"
+    "Game and campaign icons on the Dashboard and Inventory are no longer cut off - the whole image is shown",
+    "The Twitch and Kick progress cards now show watched minutes next to the percentage, e.g. \"63% complete, 38 / 60 min\""
   ],
   "historic_versions": [
+    {
+      "version": "1.0.16",
+      "type": "Fix",
+      "changelog": [
+        "The app's hidden Twitch players (drop mining and Watch Streak) now run audio-only instead of decoding video, so watching the same channel yourself in a browser no longer stutters"
+      ]
+    },
     {
       "version": "1.0.15",
       "type": "Fix",
