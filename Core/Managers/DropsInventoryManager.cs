@@ -1809,17 +1809,18 @@ namespace Core.Managers
         {
             if (TwitchWebView == null) return;
 
-            // Open settings -> Quality -> Select lowest available (usually 160p or Audio Only)
+            // Audio-only: drops only need the player running, and not decoding any video keeps the miner from
+            // competing with the user's own player when they watch the same channel in a browser.
             string js = @"
                 (() => {
-                    localStorage.setItem('video-quality', '{""default"":""160p30""}');
+                    localStorage.setItem('video-quality', '{""default"":""audio_only""}');
                 })();
             ";
 
             try
             {
                 string result = await await Application.Current.Dispatcher.InvokeAsync(async () => await TwitchWebView.ExecuteScriptAsync(js));
-                AppLogger.Debug("TwitchSelection", "[Twitch] Quality set to 160p 30");
+                AppLogger.Debug("TwitchSelection", "[Twitch] Quality set to audio only");
             }
             catch (Exception ex)
             {

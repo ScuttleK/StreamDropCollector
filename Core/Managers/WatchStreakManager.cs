@@ -269,6 +269,18 @@ namespace Core.Managers
                 await _webView!.EnsureInitializedAsync();
                 await _webView.NavigateAsync($"https://www.twitch.tv/{entry.ChannelLogin}");
 
+                // Watch audio-only (same as the drops miner) so this hidden player doesn't decode video at
+                // the default quality alongside the user's own player; reload once if it wasn't set yet.
+                string switched = await _webView.ExecuteScriptAsync(@"
+                    (() => {
+                        const audioOnly = '{""default"":""audio_only""}';
+                        if (localStorage.getItem('video-quality') === audioOnly) return false;
+                        localStorage.setItem('video-quality', audioOnly);
+                        return true;
+                    })();");
+                if (switched?.Trim('"') == "true")
+                    await _webView.ForceRefreshAsync();
+
                 // Opportunistically listen for a ChannelPointsContext response with an available
                 // claim for the whole watch window. Twitch won't actually surface a claimable bonus
                 // until its own watch-time requirement is met, so this mostly just sits waiting --
