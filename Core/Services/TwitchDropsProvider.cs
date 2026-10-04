@@ -122,6 +122,16 @@ namespace Core.Services
                 JsonArray dropCampaignsInProgress = ongoingCampaigns["data"]?["currentUser"]?["inventory"]?["dropCampaignsInProgress"]?.AsArray() ?? new JsonArray();
                 JsonArray gameEventDrops = ongoingCampaigns["data"]?["currentUser"]?["inventory"]?["gameEventDrops"]?.AsArray() ?? new JsonArray(); // Already finished/claimed drops
 
+                AppLogger.Debug("TwitchDrops", $"Inventory: dropCampaignsInProgress={dropCampaignsInProgress.Count}, gameEventDrops={gameEventDrops.Count}");
+                foreach (JsonObject eventDrop in gameEventDrops.OfType<JsonObject>())
+                    AppLogger.Debug("TwitchDrops", $"Inventory claimed benefit: id={eventDrop["id"]}, name='{eventDrop["name"]}', lastAwardedAt={eventDrop["lastAwardedAt"]}");
+                foreach (JsonObject inProgress in dropCampaignsInProgress.OfType<JsonObject>())
+                    foreach (JsonObject drop in (inProgress["timeBasedDrops"]?.AsArray() ?? new JsonArray()).OfType<JsonObject>())
+                        AppLogger.Debug("TwitchDrops", $"Inventory in-progress drop: campaign={inProgress["id"]} ('{inProgress["name"]}'), drop={drop["id"]}, self={drop["self"]?.ToJsonString()}, benefits={string.Join(",", (drop["benefitEdges"]?.AsArray() ?? new JsonArray()).OfType<JsonObject>().Select(b => b["benefit"]?["id"]?.ToString()))}");
+                foreach (DropsCampaign parsed in result)
+                    foreach (DropsReward reward in parsed.Rewards)
+                        AppLogger.Debug("TwitchDrops", $"Campaign reward: campaign={parsed.Id} ('{parsed.Name}', starts {parsed.StartsAt:u}), drop={reward.Id}, benefit={reward.DropInstanceId}, name='{reward.Name}', progress={reward.ProgressMinutes}/{reward.RequiredMinutes}, claimed={reward.IsClaimed}");
+
                 // Create a new list with updated campaigns
                 List<DropsCampaign> updatedResult = new List<DropsCampaign>();
 
