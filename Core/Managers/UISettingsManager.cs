@@ -293,6 +293,19 @@ namespace Core.Managers
         /// </summary>
         public IReadOnlyList<string> LatestChangelog => _latestChangelog.AsReadOnly();
 
+        /// <summary>The newest published version from the last update check, or null if none has completed.</summary>
+        public string? LatestVersion { get; private set; }
+
+        /// <summary>
+        /// True once an automatic (scheduled/on-launch) update check has completed in this session and found an
+        /// update - the UI uses it to show its update prompt once per launch, even when the check finished before
+        /// the main window was ready to listen.
+        /// </summary>
+        public bool AutomaticCheckFoundUpdate { get; private set; }
+
+        /// <summary>Raised after every automatic update check completes; the argument is whether an update was found.</summary>
+        public event Action<bool>? AutomaticUpdateCheckCompleted;
+
         /// <summary>
         /// <see cref="LatestChangelog"/> pre-formatted as a single bullet-point block, ready to drop straight into
         /// a TextBlock or MessageBox.
@@ -508,6 +521,9 @@ namespace Core.Managers
                 }
 
                 await PerformUpdateCheckAsync();
+
+                AutomaticCheckFoundUpdate = UpdateAvailable && NotifyOnNewUpdateAvailable;
+                AutomaticUpdateCheckCompleted?.Invoke(AutomaticCheckFoundUpdate);
             }
         }
         /// <summary>
@@ -555,6 +571,7 @@ namespace Core.Managers
             // Populate the changelog before flipping UpdateAvailable - its setter fires the "Update
             // Available" notification and reads _latestChangelog for a teaser, so this needs to be
             // ready first.
+            LatestVersion = serverUpdateInfo.Version;
             _latestChangelog = isNewer ? (serverUpdateInfo.Changelog ?? new List<string>()) : new List<string>();
             OnPropertyChanged(nameof(LatestChangelog));
             OnPropertyChanged(nameof(LatestChangelogText));

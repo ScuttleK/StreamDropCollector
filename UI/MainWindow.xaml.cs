@@ -115,8 +115,28 @@ namespace UI
             _ = WatchStreakView.Instance;
         }
 
+        private bool _updatePromptShown;
+
+        /// <summary>
+        /// Shows the update dialog once per launch after an automatic check finds an update (so with "Every time
+        /// the app starts" it re-appears on every launch, not just as a short-lived toast). If the window is hidden
+        /// in the tray, it waits until the window is first shown.
+        /// </summary>
+        private void TryShowUpdatePrompt()
+        {
+            if (_updatePromptShown || !UISettingsManager.Instance.AutomaticCheckFoundUpdate || !IsVisible)
+                return;
+
+            _updatePromptShown = true;
+            UpdateDialog.ShowFor(this, updateAvailable: true);
+        }
+
         private void OnMainWindowLoaded(object sender, RoutedEventArgs e)
         {
+            UISettingsManager.Instance.AutomaticUpdateCheckCompleted += _ => Dispatcher.InvokeAsync(TryShowUpdatePrompt);
+            IsVisibleChanged += (_, _) => Dispatcher.InvokeAsync(TryShowUpdatePrompt);
+            Dispatcher.InvokeAsync(TryShowUpdatePrompt, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+
             StartActivationServer();
 
             FileVersionInfo localVersionInfo = FileVersionInfo.GetVersionInfo(Utility.GetExePath());

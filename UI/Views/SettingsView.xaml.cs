@@ -22,10 +22,10 @@ namespace UI.Views
             DataContext = UISettingsManager.Instance;
         }
 
-        private async void OnUpdateButtonClick(object sender, RoutedEventArgs e)
+        private void OnUpdateButtonClick(object sender, RoutedEventArgs e)
         {
             if (UISettingsManager.Instance.UpdateAvailable)
-                await UpdateManager.Instance.DownloadUpdate(); // Download and apply the update
+                UpdateDialog.ShowFor(Window.GetWindow(this), updateAvailable: true); // Download and apply from the dialog
         }
 
         private async void OnCheckForUpdatesNowClick(object sender, RoutedEventArgs e)
@@ -36,16 +36,7 @@ namespace UI.Views
             try
             {
                 bool updateAvailable = await UISettingsManager.Instance.CheckForUpdatesNowAsync();
-
-                string message = updateAvailable
-                    ? $"A new update is available - click \"Update Now\" to install it.\n\nWhat's new:\n{UISettingsManager.Instance.LatestChangelogText}"
-                    : "You're already on the latest version.";
-
-                MessageBox.Show(
-                    message,
-                    "Check for Updates",
-                    MessageBoxButton.OK,
-                    updateAvailable ? MessageBoxImage.Information : MessageBoxImage.None);
+                UpdateDialog.ShowFor(Window.GetWindow(this), updateAvailable);
             }
             finally
             {
