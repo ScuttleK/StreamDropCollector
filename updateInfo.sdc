@@ -1,10 +1,17 @@
 {
-  "version": "1.0.19",
+  "version": "1.0.20",
   "type": "Fix",
   "changelog": [
-    "The update window now lists what's new in every version since the one you have installed, not just the latest release"
+    "The Help page's \"Download the Browser Extension\" button now works and opens the new open-source Stream Drop Collector Extension, with install steps for Chrome, Brave, Edge, Firefox and LibreWolf"
   ],
   "historic_versions": [
+    {
+      "version": "1.0.19",
+      "type": "Fix",
+      "changelog": [
+        "The update window now lists what's new in every version since the one you have installed, not just the latest release"
+      ]
+    },
     {
       "version": "1.0.18",
       "type": "Fix",
