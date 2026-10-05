@@ -120,7 +120,7 @@
                         <TextBlock FontSize="16">
                             <Hyperlink Style="{StaticResource NeonHyperlink}"
                                        IsEnabled="False"
-                                       NavigateUri="https://github.com/ScuttleK/automatic-twitch-ext-fork/releases/latest"
+                                       NavigateUri="https://github.com/ScuttleK/stream-drop-collector-extension/releases/latest"
                                        RequestNavigate="Hyperlink_RequestNavigate"
                                        ToolTip="Not ready yet - still in progress"
                                        ToolTipService.ShowOnDisabled="True">
