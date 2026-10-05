@@ -108,22 +108,23 @@
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                     <StackPanel>
                         <TextBlock Text="Browser Extension (Optional)" Style="{StaticResource SectionTitle}"/>
-                        <Border Background="#332A1F00" BorderBrush="Gold" BorderThickness="1"
-                                CornerRadius="8" Padding="12,8" Margin="0,0,0,16">
-                            <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="Gold" TextWrapping="Wrap">
-                                ⚠ Still in progress - may not work as expected.
-                            </TextBlock>
-                        </Border>
                         <TextBlock Style="{StaticResource BodyText}">
-                            A companion Chrome extension that automatically claims Drops, Moments, and Channel Points bonuses while you browse Twitch directly - separate from this app, not a replacement for it. It's hosted in a private repo, so downloading it will prompt a GitHub login.
+                            Stream Drop Collector Extension claims channel point bonuses, Drops and Moments while you watch Twitch yourself in your browser, and shows which channels you've earned points on. It's a companion to this app, not a replacement. Free, open source (MIT) and with no tracking.
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource BodyText}">
+                            <Run FontWeight="SemiBold" Text="Chrome / Brave / Edge:"/>
+                            <Run Text="download the -chrome.zip from the release, extract it to a folder you'll keep, open chrome://extensions (or brave:// / edge://), turn on Developer mode, click Load unpacked and pick that folder."/>
+                            <LineBreak/>
+                            <Run FontWeight="SemiBold" Text="Firefox / LibreWolf:"/>
+                            <Run Text="install the .xpi from about:addons (gear icon, Install Add-on From File). LibreWolf needs xpinstall.signatures.required set to false in about:config."/>
+                            <LineBreak/>
+                            <Run Text="Had the old Automatic Twitch extension? Remove it first. The extension checks for its own updates and shows them in its popup."/>
                         </TextBlock>
                         <TextBlock FontSize="16">
                             <Hyperlink Style="{StaticResource NeonHyperlink}"
-                                       IsEnabled="False"
-                                       NavigateUri="https://github.com/ScuttleK/stream-drop-collector-extension/releases/latest"
+                                       NavigateUri="https://github.com/ScuttleK/StreamDropCollector-Extension/releases/latest"
                                        RequestNavigate="Hyperlink_RequestNavigate"
-                                       ToolTip="Not ready yet - still in progress"
-                                       ToolTipService.ShowOnDisabled="True">
+                                       ToolTip="Opens the latest release on GitHub">
                                 Download the Browser Extension &#8594;
                             </Hyperlink>
                         </TextBlock>
